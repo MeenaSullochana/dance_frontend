@@ -1,0 +1,148 @@
+import { Link } from 'react-router-dom'
+import { FiUser, FiUsers, FiUserCheck, FiCheckCircle, FiAward, FiArrowRight, FiUpload, FiLayers } from 'react-icons/fi'
+import { useApp } from '../../context/AppContext'
+import StatusBadge from '../../components/StatusBadge'
+import { playerPhoto } from '../../utils/playerPhoto'
+import { dodImages, dodLogo } from '../../assets/images'
+
+export default function AdminDashboard() {
+  const { players, judges, pendingMembers, scores, playerStats, settings, maxTotal } = useApp()
+
+  const stats = [
+    { label: 'Single Players', value: players.filter((p) => p.type === 'single').length, icon: FiUser, color: 'pink', to: '/admin/players' },
+    { label: 'Groups', value: players.filter((p) => p.type === 'group').length, icon: FiUsers, color: 'purple', to: '/admin/players' },
+    { label: 'Judges', value: judges.length, icon: FiUserCheck, color: 'orange', to: '/admin/judges' },
+    {
+      label: 'Fully Judged',
+      value: players.filter((p) => ['qualified', 'rejected', 'winner'].includes(playerStats[p.id].status)).length,
+      icon: FiCheckCircle,
+      color: 'green',
+      to: '/admin/results',
+    },
+  ]
+
+  const recent = [...scores].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 6)
+  const top = [...players].sort((a, b) => playerStats[b.id].avg - playerStats[a.id].avg).slice(0, 5)
+  const nameOf = (list, id) => list.find((x) => x.id === id)?.name || 'Unknown'
+
+  return (
+    <div className="stack">
+      <section className="admin-hero" style={{ backgroundImage: `url(${dodImages.dodBanner})` }}>
+        <div className="admin-hero-copy">
+          <span className="admin-kicker">Rotary Club of Madras North · Season 14</span>
+          <h2>Dance of District</h2>
+          <p>31 October 2026 · 9:00 AM to 5:00 PM · Ethiraj College Auditorium</p>
+          <div className="admin-hero-links">
+            <Link to="/admin/players" className="btn btn-primary">Manage entries</Link>
+            <Link to="/admin/results" className="btn btn-ghost">
+              {settings.resultsPublished ? 'Results are live' : 'Publish results'} <FiArrowRight />
+            </Link>
+          </div>
+        </div>
+        <img src={dodLogo} alt="" className="admin-hero-mark" />
+      </section>
+
+      <div className="stat-grid">
+        {stats.map(({ label, value, icon: Icon, color, to }) => (
+          <Link key={label} to={to} className={`stat-card glass stat-${color}`}>
+            <div className="stat-icon"><Icon /></div>
+            <div>
+              <strong>{value}</strong>
+              <span className="muted">{label}</span>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      {pendingMembers.length > 0 && (
+        <div className="banner glass">
+          <span>
+            <strong>{pendingMembers.length}</strong> user registration{pendingMembers.length > 1 ? 's' : ''} waiting for approval.
+          </span>
+          <Link to="/admin/users" className="btn btn-ghost">Review</Link>
+        </div>
+      )}
+
+      <div className={`banner glass ${settings.resultsPublished ? 'ok' : ''}`}>
+        <span>
+          Results are <strong>{settings.resultsPublished ? 'PUBLISHED' : 'not published'}</strong> on the public website.
+        </span>
+        <Link to="/admin/results" className="btn btn-ghost">Manage</Link>
+      </div>
+
+      <div className="admin-shortcuts">
+        <Link to="/admin/players" className="glass admin-shortcut">
+          <FiUsers />
+          <strong>Players & groups</strong>
+          <span className="muted small">Add solo dancers, teams, photos and categories.</span>
+        </Link>
+        <Link to="/admin/judges" className="glass admin-shortcut">
+          <FiUserCheck />
+          <strong>Judges</strong>
+          <span className="muted small">Create judge logins and turn them on or off.</span>
+        </Link>
+        <Link to="/admin/users" className="glass admin-shortcut">
+          <FiUser />
+          <strong>Users</strong>
+          <span className="muted small">Approve public registrations before they can sign in.</span>
+        </Link>
+        <Link to="/admin/results" className="glass admin-shortcut">
+          <FiAward />
+          <strong>Results</strong>
+          <span className="muted small">Crown winners and publish the leaderboard.</span>
+        </Link>
+        <Link to="/admin/import" className="glass admin-shortcut">
+          <FiUpload />
+          <strong>Import Excel</strong>
+          <span className="muted small">Upload Google Form responses and auto-classify.</span>
+        </Link>
+        <Link to="/admin/classifications" className="glass admin-shortcut">
+          <FiLayers />
+          <strong>Classifications</strong>
+          <span className="muted small">Age bands, Rotaractor types, Solo/Couple/Group rules.</span>
+        </Link>
+      </div>
+
+      <div className="two-col">
+        <div className="panel glass">
+          <h2>Recent Scores</h2>
+          <table className="table">
+            <thead>
+              <tr><th>Player</th><th>Judge</th><th>Marks</th></tr>
+            </thead>
+            <tbody>
+              {recent.map((s) => (
+                <tr key={s.id}>
+                  <td>{nameOf(players, s.playerId)}</td>
+                  <td>{nameOf(judges, s.judgeId)}</td>
+                  <td><strong>{s.total}</strong><span className="muted">/{playerStats[s.playerId]?.maxTotal || maxTotal}</span></td>
+                </tr>
+              ))}
+              {!recent.length && (
+                <tr><td colSpan="3" className="muted center">No scores yet</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="panel glass">
+          <h2>Top 5 Leaderboard</h2>
+          <ul className="top-list">
+            {top.map((p, i) => (
+              <li key={p.id}>
+                <span className="rank">{i + 1}</span>
+                <img src={playerPhoto(p)} alt="" className="avatar" />
+                <div className="grow">
+                  <strong>{p.name}</strong>
+                  <span className="muted small">{p.type === 'group' ? 'Group' : 'Single'} · {p.category}</span>
+                </div>
+                <span className="score">{playerStats[p.id].avg.toFixed(1)}</span>
+                <StatusBadge status={playerStats[p.id].status} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  )
+}
