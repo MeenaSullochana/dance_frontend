@@ -4,11 +4,12 @@ import { FiArrowLeft, FiSave } from 'react-icons/fi'
 import { useApp } from '../../context/AppContext'
 import StatusBadge from '../../components/StatusBadge'
 import { playerPhoto } from '../../utils/playerPhoto'
+import { memberLabel } from '../../utils/member'
 
 export default function ScorePlayer() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { players, scores, playerStats, currentUser, submitScore, showToast, criteriaFor } = useApp()
+  const { players, scores, playerStats, currentUser, submitScore, showToast, criteriaFor, settings } = useApp()
   const player = players.find((p) => p.id === id)
   const criteria = criteriaFor(player?.classificationId)
   const maxTotal = criteria.reduce((sum, item) => sum + Number(item.maxMarks || 0), 0) || 1
@@ -20,6 +21,7 @@ export default function ScorePlayer() {
   const [comment, setComment] = useState(existing?.comment || '')
 
   if (!player) return <Navigate to="/judge" replace />
+  const live = settings.livePlayerId === player.id
 
   const total = criteria.reduce((sum, item) => sum + Number(marks[item.key] || 0), 0)
   const percent = (total / maxTotal) * 100
@@ -46,12 +48,18 @@ export default function ScorePlayer() {
           <span className="muted">{player.type === 'group' ? 'Group performance' : 'Solo performance'}</span>
           {player.type === 'group' && (
             <div className="member-chips">
-              {player.members.map((m) => <span key={m} className="chip small">{m}</span>)}
+              {player.members.map((member) => <span key={memberLabel(member)} className="chip small">{memberLabel(member)}</span>)}
             </div>
           )}
           <StatusBadge status={playerStats[player.id].status} />
         </div>
 
+        {!live ? (
+          <div className="panel glass score-form">
+            <h2>Marks are closed</h2>
+            <p className="muted">Marks open only while the admin has this participant live.</p>
+          </div>
+        ) : (
         <form className="panel glass score-form" onSubmit={handleSubmit}>
           <h2>{existing ? 'Edit your marks' : 'Give marks'}</h2>
           {criteria.map((c) => (
@@ -87,6 +95,7 @@ export default function ScorePlayer() {
             <FiSave /> {existing ? 'Update Marks' : 'Submit Marks'}
           </button>
         </form>
+        )}
       </div>
     </div>
   )

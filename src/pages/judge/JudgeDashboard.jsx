@@ -18,7 +18,10 @@ export default function JudgeDashboard() {
       seenLive.current = liveId
       setStageId(liveId)
     }
-    if (!liveId) seenLive.current = null
+    if (!liveId) {
+      seenLive.current = null
+      setStageId(null)
+    }
   }, [settings.livePlayerId])
 
   const myScore = (playerId) => scores.find((s) => s.playerId === playerId && s.judgeId === currentUser.id)
@@ -77,7 +80,9 @@ export default function JudgeDashboard() {
             const mine = myScore(p.id)
             return (
               <PlayerCard key={p.id} player={p} stats={playerStats[p.id]} showScore={false} participantTypes={participantTypes} live={settings.livePlayerId === p.id}>
-                {mine ? (
+                {settings.livePlayerId !== p.id ? (
+                  <span className="muted small">Marks open only while live</span>
+                ) : mine ? (
                   <>
                     <span className="my-score">
                       <FiCheck /> Your marks: <strong>{mine.total}</strong>/{playerStats[p.id].maxTotal}

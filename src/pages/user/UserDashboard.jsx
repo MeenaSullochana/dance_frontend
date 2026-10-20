@@ -17,7 +17,10 @@ export default function UserDashboard() {
       seenLive.current = liveId
       setStageId(liveId)
     }
-    if (!liveId) seenLive.current = null
+    if (!liveId) {
+      seenLive.current = null
+      setStageId(null)
+    }
   }, [settings.livePlayerId])
 
   const list = useMemo(() => {
@@ -75,7 +78,11 @@ export default function UserDashboard() {
       <div className="card-grid">
         {list.map((p) => (
           <PlayerCard key={p.id} player={p} stats={playerStats[p.id]} showScore={published} participantTypes={participantTypes} live={settings.livePlayerId === p.id}>
-            <button className="btn btn-ghost small" onClick={() => setStageId(p.id)}>View</button>
+            {settings.livePlayerId === p.id ? (
+              <button className="btn btn-primary small" onClick={() => setStageId(p.id)}>Watch live</button>
+            ) : (
+              <span className="muted small">Opens when live</span>
+            )}
           </PlayerCard>
         ))}
       </div>

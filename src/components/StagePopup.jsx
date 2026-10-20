@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { FiRadio, FiSave } from 'react-icons/fi'
 import { useApp } from '../context/AppContext'
 import { playerPhoto } from '../utils/playerPhoto'
+import { memberLabel } from '../utils/member'
 import Modal from './Modal'
 import StatusBadge from './StatusBadge'
 
@@ -75,7 +76,7 @@ export default function StagePopup({ player, mode, onClose }) {
           {player.members?.length > 0 && (
             <div className="member-chips">
               {player.members.map((member) => (
-                <span key={member} className="chip small">{member}</span>
+                <span key={memberLabel(member)} className="chip small">{memberLabel(member)}</span>
               ))}
             </div>
           )}
@@ -87,7 +88,12 @@ export default function StagePopup({ player, mode, onClose }) {
           )}
         </div>
 
-        {mode === 'judge' ? (
+        {mode === 'judge' && settings.livePlayerId !== player.id ? (
+          <div className="stage-note">
+            <h3>Marks are closed</h3>
+            <p className="muted">A judge can mark {player.name} only while the admin has this participant live.</p>
+          </div>
+        ) : mode === 'judge' ? (
           <form className="score-form" onSubmit={saveMarks}>
             <p className="muted small">Categories and maximum marks are set by admin.</p>
             {criteria.map((item) => (

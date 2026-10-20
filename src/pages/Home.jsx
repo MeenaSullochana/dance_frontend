@@ -40,6 +40,7 @@ import FloatingContact from '../components/FloatingContact'
 import SiteFooter from '../components/SiteFooter'
 import { SOCIAL_LINKS } from '../constants/contact'
 import { playerPhoto } from '../utils/playerPhoto'
+import { memberLabel } from '../utils/member'
 import { homePath } from '../constants/scoring'
 import { DANCE_STYLES, STYLE_GROUPS } from '../constants/danceStyles'
 
@@ -602,7 +603,7 @@ export default function Home() {
                     <strong>{p.name}</strong>
                     <span className="muted small">
                       #{p.chestNo} · {p.category}
-                      {p.type === 'group' && ` · ${p.members.join(', ')}`}
+                      {p.type === 'group' && p.members?.length ? ` · ${p.members.map(memberLabel).join(', ')}` : ''}
                     </span>
                   </div>
                   <div className="lb-score">

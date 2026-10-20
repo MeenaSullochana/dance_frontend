@@ -1,13 +1,24 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FiEdit2, FiPlus, FiRadio, FiSearch, FiTrash2, FiUser, FiUsers, FiX, FiUpload } from 'react-icons/fi'
+import { FiCamera, FiEdit2, FiEye, FiPlus, FiRadio, FiSearch, FiTrash2, FiUser, FiUsers, FiX, FiUpload } from 'react-icons/fi'
 import { FaUserFriends } from 'react-icons/fa'
 import { useApp } from '../../context/AppContext'
-import PlayerCard from '../../components/PlayerCard'
 import Modal from '../../components/Modal'
 import StagePopup from '../../components/StagePopup'
 import { CATEGORIES } from '../../constants/scoring'
 import { DANCE_STYLES, STYLE_GROUPS } from '../../constants/danceStyles'
+import { asPeople, memberLabel } from '../../utils/member'
+import { playerPhoto } from '../../utils/playerPhoto'
+
+const FEE_OPTIONS = [
+  { value: 'received', label: 'Received' },
+  { value: 'not_received', label: 'Not received' },
+  { value: 'doubt', label: 'Doubt' },
+]
+
+function knownFee(value) {
+  return FEE_OPTIONS.some((option) => option.value === value) ? value : ''
+}
 
 const CategoryOptions = () =>
   STYLE_GROUPS.map((g) => (
@@ -33,11 +44,12 @@ const emptyForm = (type) => ({
   age: '',
   participantTypeId: '',
   classificationId: '',
-  members: type === 'single' ? [] : [''],
+  members: type === 'single' ? [] : [{ name: '', age: '' }, { name: '', age: '' }],
   photo: null,
   email: '',
   phone: '',
   club: '',
+  feeStatus: '',
 })
 
 const PHOTO_MAX_SIZE = 400
@@ -60,13 +72,81 @@ function shrinkPhoto(file) {
   })
 }
 
-function PlayerForm({ initial, onSave, onCancel, participantTypes, classifications, formats }) {
+function narrowestBand(bands) {
+  return [...bands].sort(
+    (a, b) => (Number(a.maxAge) - Number(a.minAge)) - (Number(b.maxAge) - Number(b.minAge)) || Number(a.minAge) - Number(b.minAge),
+  )[0]
+}
+
+function placedCategory(form, { classifications, ageBands, formats }) {
+  const formatKey = form.formatKey || 'solo'
+  const listed = (form.members || []).map((member) => Number(member.age)).filter((value) => Number.isInteger(value) && value > 0)
+  const own = Number(form.age)
+  const ages = formatKey === 'solo' ? (Number.isInteger(own) && own > 0 ? [own] : []) : (listed.length ? listed : (Number.isInteger(own) && own > 0 ? [own] : []))
+  const oldest = ages.length ? Math.max(...ages) : null
+  const formatId = formats.find((item) => item.key === formatKey)?.id
+  const options = classifications.filter((item) => item.kind === 'category' && item.formatId === formatId)
+  if (oldest != null) {
+    const covering = ageBands.filter(
+      (item) => item.active !== false && oldest >= Number(item.minAge) && oldest <= Number(item.maxAge),
+    )
+    const scoped = covering.filter((item) => (item.formatKeys || []).includes(formatKey))
+    const band = narrowestBand(scoped.length ? scoped : formatKey === 'group' ? covering : [])
+    const match = band && options.find((item) => item.ageBandId === band.id)
+    if (match) return { name: match.name, oldest }
+    if (band && formatKey === 'group') return { name: `${band.name} · Group`, oldest }
+  }
+  if (formatKey === 'group' && oldest == null && form.participantTypeId) {
+    const match = options.find((item) => item.participantTypeId === form.participantTypeId)
+    if (match) return { name: match.name, oldest }
+  }
+  return { name: '', oldest }
+}
+
+function PlayerForm({ initial, spot, onSave, onCancel, participantTypes, classifications, formats, ageBands }) {
   const [form, setForm] = useState(initial)
+  const [cameraOn, setCameraOn] = useState(false)
+  const videoRef = useRef(null)
+  const streamRef = useRef(null)
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }))
   const formatKey = form.formatKey || (form.type === 'group' ? 'group' : form.type === 'couple' ? 'couple' : 'solo')
-  const formatId = formats.find((item) => item.key === formatKey)?.id
   const allowedTypes = participantTypes.filter((item) => !item.formatKeys?.length || item.formatKeys.includes(formatKey))
-  const categoryOptions = classifications.filter((item) => item.kind === 'category' && item.formatId === formatId)
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop())
+    streamRef.current = null
+    setCameraOn(false)
+  }
+
+  useEffect(() => () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop())
+  }, [])
+
+  useEffect(() => {
+    if (cameraOn && videoRef.current && streamRef.current) videoRef.current.srcObject = streamRef.current
+  }, [cameraOn])
+
+  const openCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+      streamRef.current = stream
+      setCameraOn(true)
+    } catch {
+      setCameraOn(false)
+    }
+  }
+
+  const capturePhoto = () => {
+    const video = videoRef.current
+    if (!video?.videoWidth) return
+    const scale = Math.min(1, PHOTO_MAX_SIZE / Math.max(video.videoWidth, video.videoHeight))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(video.videoWidth * scale)
+    canvas.height = Math.round(video.videoHeight * scale)
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
+    set('photo', canvas.toDataURL('image/jpeg', 0.8))
+    stopCamera()
+  }
 
   const handlePhoto = (e) => {
     const file = e.target.files[0]
@@ -83,10 +163,18 @@ function PlayerForm({ initial, onSave, onCancel, participantTypes, classificatio
       category: form.danceStyle,
       age: form.age === '' ? null : Number(form.age),
       participantTypeId: form.participantTypeId || null,
-      classificationId: form.classificationId || null,
-      members: formatKey === 'solo' ? [] : form.members.map((m) => m.trim()).filter(Boolean),
+      classificationId: '',
+      feeStatus: form.feeStatus || 'pending',
+      members: formatKey === 'solo'
+        ? []
+        : form.members
+            .map((member) => ({ name: String(member.name || '').trim(), age: member.age === '' ? null : Number(member.age) }))
+            .filter((member) => member.name),
     })
+    stopCamera()
   }
+
+  const placement = placedCategory(form, { classifications, ageBands, formats })
 
   return (
     <form className="form" onSubmit={handleSubmit}>
@@ -101,7 +189,7 @@ function PlayerForm({ initial, onSave, onCancel, participantTypes, classificatio
                 ...f,
                 formatKey: key,
                 type: key === 'group' ? 'group' : key === 'couple' ? 'couple' : 'single',
-                members: key === 'solo' ? [] : f.members.length ? f.members : [''],
+                members: key === 'solo' ? [] : f.members.length ? f.members : [{ name: '', age: '' }, ...(key === 'group' ? [] : [{ name: '', age: '' }])],
               }))
             }
           >
@@ -114,17 +202,20 @@ function PlayerForm({ initial, onSave, onCancel, participantTypes, classificatio
         <input value={form.name} onChange={(e) => set('name', e.target.value)} required />
       </label>
       <div className="form-grid">
-        <label>
-          Age
-          <input
-            type="number"
-            min="1"
-            max="120"
-            value={form.age}
-            onChange={(e) => set('age', e.target.value)}
-            placeholder="For auto classification"
-          />
-        </label>
+        {formatKey === 'solo' && (
+          <label>
+            Age
+            <input
+              type="number"
+              min="1"
+              max="120"
+              value={form.age}
+              onChange={(e) => set('age', e.target.value)}
+              placeholder="Required to place the category"
+              required
+            />
+          </label>
+        )}
         <label>
           Participant type
           <select value={form.participantTypeId || ''} onChange={(e) => set('participantTypeId', e.target.value)}>
@@ -141,52 +232,78 @@ function PlayerForm({ initial, onSave, onCancel, participantTypes, classificatio
           <CategoryOptions />
         </select>
       </label>
-      <label>
-        Category
-        <select value={form.classificationId || ''} onChange={(e) => set('classificationId', e.target.value)}>
-          <option value="">Auto from age, type and format</option>
-          {categoryOptions.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}{item.price != null ? ` · Rs.${item.price}` : ''}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className={`place-note ${placement.name ? 'ok' : ''}`}>
+        {placement.oldest ? `Oldest listed age ${placement.oldest}. ` : 'Add each person’s age. '}
+        {placement.name ? `Category: ${placement.name}` : 'Category is chosen after the age and type are set.'}
+      </div>
 
       {formatKey !== 'solo' && (
         <div className="members">
-          <span className="label">Other participants</span>
-          {form.members.map((m, i) => (
+          <span className="label">{formatKey === 'couple' ? 'Couple' : 'Group'} — name and age of each person</span>
+          {form.members.map((member, i) => (
             <div className="member-row" key={i}>
               <input
-                value={m}
-                placeholder={`Member ${i + 1}`}
-                onChange={(e) => set('members', form.members.map((x, j) => (j === i ? e.target.value : x)))}
+                value={member.name}
+                placeholder={`Person ${i + 1}`}
+                onChange={(e) => set('members', form.members.map((item, j) => (j === i ? { ...item, name: e.target.value } : item)))}
+              />
+              <input
+                type="number"
+                min="1"
+                max="120"
+                value={member.age}
+                placeholder="Age"
+                onChange={(e) => set('members', form.members.map((item, j) => (j === i ? { ...item, age: e.target.value } : item)))}
               />
               <button
                 type="button"
                 className="icon-btn"
                 onClick={() => set('members', form.members.filter((_, j) => j !== i))}
-                aria-label="Remove member"
+                aria-label="Remove person"
               >
                 <FiX />
               </button>
             </div>
           ))}
-          <button type="button" className="btn btn-ghost small" onClick={() => set('members', [...form.members, ''])}>
-            <FiPlus /> Add member
+          <button type="button" className="btn btn-ghost small" onClick={() => set('members', [...form.members, { name: '', age: '' }])}>
+            <FiPlus /> Add person
           </button>
         </div>
       )}
 
       <label>
-        Photo (optional)
-        <input type="file" accept="image/*" onChange={handlePhoto} />
+        Fee
+        {spot && <span className="muted small">Spot registration — record whether the fee was received.</span>}
+        <select value={knownFee(form.feeStatus)} onChange={(e) => set('feeStatus', e.target.value)} required>
+          <option value="" disabled>Choose fee</option>
+          {FEE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        {(form.feeStatus === 'not_received' || form.feeStatus === 'doubt') && (
+          <span className="fee-alert">{form.feeStatus === 'doubt' ? 'Doubt is flagged until it is checked.' : 'Not received is flagged until the fee is collected.'}</span>
+        )}
       </label>
+
+      <div className="photo-tools">
+        <label>
+          Upload photo
+          <input type="file" accept="image/*" onChange={handlePhoto} />
+        </label>
+        <button type="button" className="btn btn-ghost" onClick={cameraOn ? stopCamera : openCamera}>
+          <FiCamera /> {cameraOn ? 'Close camera' : 'Take photo'}
+        </button>
+      </div>
+      {cameraOn && (
+        <div className="camera-box">
+          <video ref={videoRef} autoPlay playsInline muted />
+          <button type="button" className="btn btn-primary" onClick={capturePhoto}>Capture</button>
+        </div>
+      )}
       {form.photo && <img src={form.photo} alt="preview" className="photo-preview" />}
 
       <div className="form-actions">
-        <button type="button" className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+        <button type="button" className="btn btn-ghost" onClick={() => { stopCamera(); onCancel() }}>Cancel</button>
         <button className="btn btn-primary">Save</button>
       </div>
     </form>
@@ -196,36 +313,47 @@ function PlayerForm({ initial, onSave, onCancel, participantTypes, classificatio
 export default function ManagePlayers() {
   const {
     players,
-    playerStats,
     participantTypes,
     classifications,
     formats,
+    ageBands,
     settings,
     addPlayer,
     updatePlayer,
     deletePlayer,
     setLivePlayer,
+    setPlayerArrived,
     showToast,
   } = useApp()
   const [tab, setTab] = useState('single')
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All')
   const [editing, setEditing] = useState(null)
+  const [profile, setProfile] = useState(null)
+  const [idNotice, setIdNotice] = useState(null)
   const [stageId, setStageId] = useState(null)
 
-  const list = players.filter(
-    (p) =>
-      p.type === tab &&
-      (category === 'All' || p.category === category || p.danceStyle === category) &&
-      p.name.toLowerCase().includes(search.toLowerCase()),
-  )
+  const query = search.trim().toLowerCase()
+  const list = players.filter((player) => {
+    const inCategory = category === 'All' || player.category === category || player.danceStyle === category
+    if (!inCategory) return false
+    if (!query) return player.type === tab
+    return [player.name, player.phone, player.email].some((value) => String(value || '').toLowerCase().includes(query))
+  })
 
   const handleSave = async (form) => {
+    if (!knownFee(form.feeStatus)) return showToast('Choose the fee: received, not received, or doubt', 'error')
+    const previousNo = editing.arrivalNo || null
+    const previousId = editing.id
     const res = editing.id ? await updatePlayer(editing.id, form) : await addPlayer(form)
     if (!res.ok) return showToast(res.error, 'error')
+    const saved = previousId ? res.players?.find((player) => player.id === previousId) : null
     showToast(editing.id ? 'Player updated' : `${form.formatKey === 'group' ? 'Group' : 'Player'} added`)
     setTab(form.type)
     setEditing(null)
+    if (saved && previousNo && saved.arrivalNo && saved.arrivalNo !== previousNo) {
+      setIdNotice({ name: saved.name, from: previousNo, to: saved.arrivalNo, category: saved.category })
+    }
   }
 
   const handleDelete = async (p) => {
@@ -246,7 +374,40 @@ export default function ManagePlayers() {
     showToast(`${player.name} is live`)
   }
 
+  const markArrived = async (player) => {
+    const res = await setPlayerArrived(player.id, !player.arrived)
+    if (!res.ok) return showToast(res.error, 'error')
+    showToast(player.arrived ? `${player.name} marked not arrived` : `${player.name} arrived`)
+  }
+
+  const changeFee = async (player, feeStatus) => {
+    if (!knownFee(feeStatus) || feeStatus === player.feeStatus) return
+    const res = await updatePlayer(player.id, {
+      ...player,
+      feeStatus,
+      members: asPeople(player.members),
+    })
+    if (!res.ok) return showToast(res.error, 'error')
+    showToast(feeStatus === 'received' ? 'Fee received' : feeStatus === 'doubt' ? 'Fee marked as doubt' : 'Fee marked as not received')
+  }
+
+  const openEdit = (player) => {
+    const formatKey = player.formatKey || (player.type === 'group' ? 'group' : player.type === 'couple' ? 'couple' : 'solo')
+    const people = asPeople(player.members)
+    setEditing({
+      ...player,
+      formatKey,
+      danceStyle: player.danceStyle || player.category,
+      age: player.age ?? '',
+      participantTypeId: player.participantTypeId || '',
+      classificationId: player.classificationId || '',
+      feeStatus: knownFee(player.feeStatus),
+      members: formatKey === 'solo' ? [] : people.length ? people : [{ name: '', age: '' }, { name: '', age: '' }],
+    })
+  }
+
   const stagePlayer = players.find((player) => player.id === stageId)
+  const openProfile = profile ? players.find((player) => player.id === profile.id) || profile : null
 
   return (
     <div className="stack">
@@ -260,7 +421,7 @@ export default function ManagePlayers() {
         </div>
         <label className="input-icon search">
           <FiSearch />
-          <input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input placeholder="Name, mobile, or email" value={search} onChange={(e) => setSearch(e.target.value)} />
         </label>
         <select value={category} onChange={(e) => setCategory(e.target.value)} className="select">
           <option>All</option>
@@ -275,37 +436,71 @@ export default function ManagePlayers() {
       </div>
 
       <p className="muted small">
-        Import Google Form Excel under Import, or add players manually. Age + type + Solo/Couple/Group auto-map to{' '}
-        <Link to="/admin/classifications" className="link-btn">classifications</Link>.
+        Excel imports are marked Fee received. Spot registration asks for the fee. Not received and Doubt stay highlighted. Mark Arrived to issue the category ID.
+        {query ? ' Showing matches from every format.' : ''}
       </p>
 
       {list.length ? (
-        <div className="card-grid">
-          {list.map((p) => (
-            <PlayerCard key={p.id} player={p} stats={playerStats[p.id]} participantTypes={participantTypes} live={settings.livePlayerId === p.id}>
-              <button className={`btn small ${settings.livePlayerId === p.id ? 'btn-live' : 'btn-ghost'}`} onClick={() => goLive(p)}>
-                <FiRadio /> {settings.livePlayerId === p.id ? 'On stage' : 'Go live'}
-              </button>
-              <button
-                className="btn btn-ghost small"
-                onClick={() =>
-                  setEditing({
-                    ...p,
-                    danceStyle: p.danceStyle || p.category,
-                    age: p.age ?? '',
-                    participantTypeId: p.participantTypeId || '',
-                    classificationId: p.classificationId || '',
-                    members: p.members?.length ? p.members : p.type === 'single' ? [] : [''],
-                  })
-                }
-              >
-                <FiEdit2 /> Edit
-              </button>
-              <button className="btn btn-danger small" onClick={() => handleDelete(p)}>
-                <FiTrash2 /> Delete
-              </button>
-            </PlayerCard>
-          ))}
+        <div className="panel glass desk-list">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Participant</th>
+                <th>Category</th>
+                <th>Contact</th>
+                <th>Fee</th>
+                <th>Arrival ID</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((player) => {
+                const fee = knownFee(player.feeStatus)
+                const alert = player.feeStatus === 'not_received' || player.feeStatus === 'doubt'
+                const typeName = participantTypes.find((item) => item.id === player.participantTypeId)?.name
+                return (
+                  <tr key={player.id} className={`${settings.livePlayerId === player.id ? 'is-live-row' : ''} ${alert ? 'is-alert-row' : ''}`}>
+                    <td>
+                      <button type="button" className="who" onClick={() => setProfile(player)}>
+                        <img src={playerPhoto(player)} alt="" />
+                        <span>
+                          <strong>{player.name}</strong>
+                          <span className="muted small">#{player.chestNo}{typeName ? ` · ${typeName}` : ''}{player.age != null ? ` · Age ${player.age}` : ''}</span>
+                        </span>
+                      </button>
+                    </td>
+                    <td>{player.category}</td>
+                    <td className="muted small">{[player.phone, player.email].filter(Boolean).join(' · ') || '—'}</td>
+                    <td>
+                      <select
+                        className={`fee-select ${alert ? 'alert' : fee || 'pending'}`}
+                        value={fee}
+                        onChange={(e) => changeFee(player, e.target.value)}
+                        aria-label={`Fee for ${player.name}`}
+                      >
+                        {!fee && <option value="">Update fee</option>}
+                        {FEE_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>{player.arrivalNo ? <span className="desk-pill id">{player.arrivalNo}</span> : '—'}</td>
+                    <td className="actions">
+                      <button className={`btn small ${player.arrived ? 'btn-arrived' : 'btn-ghost'}`} onClick={() => markArrived(player)}>
+                        {player.arrived ? 'Arrived' : 'Mark arrived'}
+                      </button>
+                      <button className="btn btn-ghost small" onClick={() => setProfile(player)}><FiEye /> View</button>
+                      <button className={`btn small ${settings.livePlayerId === player.id ? 'btn-live' : 'btn-ghost'}`} onClick={() => goLive(player)}>
+                        <FiRadio /> {settings.livePlayerId === player.id ? 'On stage' : 'Go live'}
+                      </button>
+                      <button className="btn btn-ghost small" onClick={() => openEdit(player)}><FiEdit2 /> Edit</button>
+                      <button className="btn btn-danger small" onClick={() => handleDelete(player)}><FiTrash2 /></button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       ) : (
         <div className="empty glass">No {tab === 'group' ? 'groups' : tab === 'couple' ? 'couples' : 'players'} found.</div>
@@ -313,7 +508,8 @@ export default function ManagePlayers() {
 
       {editing && (
         <Modal
-          title={editing.id ? 'Edit Player' : `Add ${editing.type === 'group' ? 'Group' : editing.type === 'couple' ? 'Couple' : 'Player'}`}
+          wide
+          title={editing.id ? 'Edit entry' : `Add ${editing.type === 'group' ? 'Group' : editing.type === 'couple' ? 'Couple' : 'Player'}`}
           onClose={() => setEditing(null)}
         >
           <PlayerForm
@@ -326,22 +522,91 @@ export default function ManagePlayers() {
               age: editing.age ?? '',
               participantTypeId: editing.participantTypeId || '',
               classificationId: editing.classificationId || '',
-              members: editing.members || [],
+              members: asPeople(editing.members),
               photo: editing.photo,
               email: editing.email || '',
               phone: editing.phone || '',
               club: editing.club || '',
+              feeStatus: knownFee(editing.feeStatus),
             }}
             participantTypes={participantTypes}
             classifications={classifications}
             formats={formats}
+            ageBands={ageBands}
+            spot={!editing.id}
             onSave={handleSave}
             onCancel={() => setEditing(null)}
           />
         </Modal>
       )}
 
-      {stagePlayer && <StagePopup player={stagePlayer} mode="admin" onClose={() => setStageId(null)} />}
+      {openProfile && (
+        <Modal title={openProfile.name} onClose={() => setProfile(null)} wide>
+          <div className="profile-layout">
+            <img src={playerPhoto(openProfile)} alt={openProfile.name} />
+            <div className="stack">
+              <div className="desk-pills">
+                <span className="desk-pill ok">Registered</span>
+                <span className={`desk-pill ${(openProfile.feeStatus === 'not_received' || openProfile.feeStatus === 'doubt') ? 'alert' : (knownFee(openProfile.feeStatus) || 'pending')}`}>
+                  {FEE_OPTIONS.find((item) => item.value === openProfile.feeStatus)?.label || 'Update fee'}
+                </span>
+                <span className={`desk-pill ${openProfile.arrived ? 'received' : 'pending'}`}>{openProfile.arrived ? 'Arrived' : 'Not arrived'}</span>
+                {openProfile.arrivalNo && <span className="desk-pill id">{openProfile.arrivalNo}</span>}
+                {settings.livePlayerId === openProfile.id && <span className="desk-pill alert">Live</span>}
+              </div>
+              <p><strong>Category.</strong> {openProfile.category}{openProfile.age != null ? ` · Age ${openProfile.age}` : ''}</p>
+              <p><strong>Type.</strong> {participantTypes.find((item) => item.id === openProfile.participantTypeId)?.name || '—'}</p>
+              <p><strong>Dance.</strong> {openProfile.danceStyle || '—'}</p>
+              <p><strong>Phone.</strong> {openProfile.phone || '—'}</p>
+              <p><strong>Email.</strong> {openProfile.email || '—'}</p>
+              <p><strong>Club.</strong> {openProfile.club || '—'}</p>
+              {openProfile.members?.length > 0 && (
+                <p><strong>People.</strong> {openProfile.members.map(memberLabel).join(', ')}</p>
+              )}
+              <label>
+                Fee
+                <select
+                  className={`fee-select ${openProfile.feeStatus === 'not_received' || openProfile.feeStatus === 'doubt' ? 'alert' : knownFee(openProfile.feeStatus)}`}
+                  value={knownFee(openProfile.feeStatus)}
+                  onChange={(e) => changeFee(openProfile, e.target.value)}
+                >
+                  {!knownFee(openProfile.feeStatus) && <option value="">Update fee</option>}
+                  {FEE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                {(openProfile.feeStatus === 'not_received' || openProfile.feeStatus === 'doubt') && (
+                  <span className="fee-alert">This fee needs attention.</span>
+                )}
+              </label>
+              <div className="form-actions">
+                <button type="button" className={`btn ${openProfile.arrived ? 'btn-arrived' : 'btn-ghost'}`} onClick={() => markArrived(openProfile)}>
+                  {openProfile.arrived ? 'Arrived' : 'Mark arrived'}
+                </button>
+                <button type="button" className="btn btn-ghost" onClick={() => { setProfile(null); openEdit(openProfile) }}>Edit</button>
+                <button type="button" className="btn btn-primary" onClick={() => { setProfile(null); goLive(openProfile) }}>Go live</button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {idNotice && (
+        <Modal title="Arrival ID updated" onClose={() => setIdNotice(null)}>
+          <div className="stack">
+            <p>{idNotice.name} is now in <strong>{idNotice.category}</strong>.</p>
+            <p className="muted">The previous ID {idNotice.from} is replaced because the age moved this entry to another category.</p>
+            <p className="id-hero">{idNotice.to}</p>
+            <div className="form-actions">
+              <button type="button" className="btn btn-primary" onClick={() => setIdNotice(null)}>Done</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {stagePlayer && settings.livePlayerId === stagePlayer.id && (
+        <StagePopup player={stagePlayer} mode="admin" onClose={() => setStageId(null)} />
+      )}
     </div>
   )
 }

@@ -626,6 +626,26 @@ input[type='file'] {
   gap: 6px;
   color: inherit;
 }
+.format-checks input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  flex: 0 0 16px;
+}
+.category-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.fee-pill {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
 .category-card h3 {
   margin: 0;
 }
@@ -1048,9 +1068,9 @@ input[type='file'] {
 }
 .player-meta {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
 }
 .player-meta .small {
   display: inline-flex;
@@ -1179,6 +1199,152 @@ input[type='file'] {
 .player-card.is-live {
   box-shadow: 0 0 0 2px #ff2d55, 0 12px 30px rgba(255, 45, 85, 0.25);
 }
+.player-card.is-alert {
+  box-shadow: 0 0 0 1px rgba(255, 84, 112, 0.7), 0 12px 30px rgba(255, 84, 112, 0.18);
+}
+.desk-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.desk-pill {
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.08);
+}
+.desk-pill.ok {
+  color: #b8ffe4;
+  background: rgba(34, 211, 155, 0.16);
+}
+.desk-pill.received {
+  color: #d7fff2;
+  background: rgba(34, 211, 155, 0.22);
+}
+.desk-pill.pending {
+  color: #ffe7b0;
+  background: rgba(255, 176, 32, 0.16);
+}
+.desk-pill.alert {
+  color: #fff;
+  background: #ff5470;
+}
+.desk-pill.id {
+  color: #fff;
+  background: var(--grad);
+}
+.desk-list {
+  overflow-x: auto;
+}
+.who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.who img {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+.who span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+tr.is-live-row td {
+  background: rgba(255, 45, 85, 0.08);
+}
+tr.is-alert-row td {
+  background: rgba(255, 84, 112, 0.1);
+}
+.fee-select {
+  width: 148px;
+  padding: 7px 10px;
+  font-size: 0.82rem;
+}
+.fee-select.alert {
+  color: #fff;
+  background: rgba(255, 84, 112, 0.85);
+  border-color: #ff5470;
+}
+.btn-arrived {
+  background: rgba(34, 211, 155, 0.2);
+  color: #d7fff2;
+  border: 1px solid rgba(34, 211, 155, 0.45);
+}
+.profile-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 22px;
+}
+.profile-layout img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 16px;
+}
+.profile-layout p {
+  margin: 0;
+}
+.id-hero {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+@media (max-width: 700px) {
+  .profile-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.place-note {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+.place-note.ok {
+  color: var(--text);
+  background: rgba(34, 211, 155, 0.1);
+}
+.fee-alert {
+  color: #ff9fb0;
+  font-size: 0.8rem;
+}
+.photo-tools {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.photo-tools label {
+  flex: 1;
+}
+.camera-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.camera-box video {
+  width: 100%;
+  max-height: 240px;
+  object-fit: cover;
+  border-radius: 14px;
+  background: #000;
+}
+.member-row input[type='number'] {
+  max-width: 90px;
+}
 .btn-live {
   background: #ff2d55;
   color: white;
@@ -1196,6 +1362,130 @@ input[type='file'] {
   flex-direction: row !important;
   align-items: center;
   gap: 8px;
+}
+.mark-field-form {
+  gap: 16px;
+}
+.mark-pick-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mark-pick-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+.mark-picks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.form label.mark-pick {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.form label.mark-pick:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+}
+.form label.mark-pick.is-on {
+  border-color: rgba(255, 46, 136, 0.7);
+  background: linear-gradient(135deg, rgba(255, 46, 136, 0.16), rgba(138, 43, 226, 0.12));
+  box-shadow: 0 8px 24px rgba(255, 46, 136, 0.12);
+}
+.mark-pick input[type='checkbox'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.mark-pick-box {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.28);
+  display: grid;
+  place-items: center;
+}
+.mark-pick.is-on .mark-pick-box {
+  border-color: transparent;
+  background: var(--grad);
+}
+.mark-pick.is-on .mark-pick-box::after {
+  content: '';
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+.mark-pick:focus-within {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 46, 136, 0.22);
+}
+.mark-pick-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mark-pick-max {
+  min-width: 64px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+.mark-pick.is-on .mark-pick-max {
+  background: rgba(255, 255, 255, 0.14);
+}
+.mark-pick-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+}
+.mark-pick-foot p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+.mark-pick-foot p strong {
+  color: var(--text);
+}
+.mark-pick-foot p span {
+  margin: 0 8px;
+  opacity: 0.5;
+}
+.mark-pick-foot .form-actions {
+  margin-top: 0;
 }
 @media (max-width: 800px) {
   .stage-layout {

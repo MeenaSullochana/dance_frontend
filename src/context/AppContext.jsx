@@ -124,7 +124,7 @@ export function AppProvider({ children }) {
     try {
       const payload = await work()
       apply(payload)
-      return { ok: true, user: payload.user }
+      return { ok: true, user: payload.user, players: payload.players }
     } catch (error) {
       return { ok: false, error: error.message }
     } finally {
@@ -225,6 +225,7 @@ export function AppProvider({ children }) {
     toggleWinner: (id) => run(() => api.toggleWinner(id)),
     setResultsPublished: (resultsPublished) => run(() => api.updateSettings({ resultsPublished })),
     setLivePlayer: (id, live) => run(() => api.setPlayerLive(id, { live })),
+    setPlayerArrived: (id, arrived) => run(() => api.setPlayerArrived(id, { arrived })),
     createMarkCriterion: (body) => run(() => api.createMarkCriterion(body)),
     updateMarkCriterion: (id, body) => run(() => api.updateMarkCriterion(id, body)),
     deleteMarkCriterion: (id) => run(() => api.deleteMarkCriterion(id)),

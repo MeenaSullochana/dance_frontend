@@ -59,6 +59,7 @@ export const toggleAccount = (id) => request(`/accounts/${id}/toggle`, { method:
 export const deleteAccount = (id) => request(`/accounts/${id}`, { method: 'DELETE' })
 export const submitScore = (body) => request('/scores', { method: 'POST', body })
 export const setPlayerLive = (id, body) => request(`/players/${id}/live`, { method: 'PATCH', body })
+export const setPlayerArrived = (id, body) => request(`/players/${id}/arrive`, { method: 'PATCH', body })
 export const createMarkCriterion = (body) => request('/mark-criteria', { method: 'POST', body })
 export const updateMarkCriterion = (id, body) => request(`/mark-criteria/${id}`, { method: 'PATCH', body })
 export const deleteMarkCriterion = (id) => request(`/mark-criteria/${id}`, { method: 'DELETE' })

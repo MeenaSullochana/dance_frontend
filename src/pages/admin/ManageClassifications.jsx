@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FiPlus, FiTrash2 } from 'react-icons/fi'
+import { FiEdit2, FiPlus, FiTrash2 } from 'react-icons/fi'
 import { useApp } from '../../context/AppContext'
 import Modal from '../../components/Modal'
 
@@ -30,6 +30,7 @@ export default function ManageClassifications() {
     formats,
     classifications,
     categoryParameters,
+    criteria,
     players,
     createAgeBand,
     updateAgeBand,
@@ -38,6 +39,7 @@ export default function ManageClassifications() {
     updateParticipantType,
     deleteParticipantType,
     updateClassification,
+    deleteClassification,
     createCategoryParameter,
     deleteCategoryParameter,
     showToast,
@@ -46,8 +48,8 @@ export default function ManageClassifications() {
   const [bandForm, setBandForm] = useState({ name: '', minAge: 5, maxAge: 12, formatKeys: ['solo'] })
   const [typeForm, setTypeForm] = useState({ name: '', formatKeys: ['solo'] })
   const [fieldFor, setFieldFor] = useState(null)
-  const [fieldForm, setFieldForm] = useState({ name: '', maxMarks: 10 })
-  const [prices, setPrices] = useState({})
+  const [pickedIds, setPickedIds] = useState([])
+  const [editing, setEditing] = useState(null)
 
   const categories = classifications.filter((item) => item.kind === 'category')
   const formatOf = (id) => formats.find((item) => item.id === id)
@@ -85,24 +87,57 @@ export default function ManageClassifications() {
     if (!res.ok) showToast(res.error, 'error')
   }
 
-  const savePrice = async (item) => {
-    const price = Number(prices[item.id] ?? item.price ?? 0)
-    const res = await updateClassification(item.id, { price, name: item.name })
+  const saveEdit = async (event) => {
+    event.preventDefault()
+    const name = editing.name.trim()
+    let res
+    if (editing.kind === 'band') {
+      res = await updateAgeBand(editing.id, {
+        name,
+        minAge: Number(editing.minAge),
+        maxAge: Number(editing.maxAge),
+        formatKeys: editing.formatKeys,
+      })
+    } else if (editing.kind === 'type') {
+      res = await updateParticipantType(editing.id, { name, formatKeys: editing.formatKeys })
+    } else {
+      res = await updateClassification(editing.id, { name, price: Number(editing.price), prefix: editing.prefix || '' })
+    }
     if (!res.ok) return showToast(res.error, 'error')
-    showToast('Price saved')
+    showToast('Saved')
+    setEditing(null)
   }
 
-  const addField = async (event) => {
+  const removeCategory = async (item) => {
+    if (!window.confirm(`Remove "${item.name}"? Players in it will no longer belong to this category.`)) return
+    const res = await deleteClassification(item.id)
+    if (!res.ok) return showToast(res.error, 'error')
+    showToast('Category removed')
+  }
+
+  const openFields = (item) => {
+    const attached = new Set(fieldsOf(item.id).map((field) => field.key))
+    setPickedIds(criteria.filter((criterion) => attached.has(criterion.key)).map((criterion) => criterion.id))
+    setFieldFor(item)
+  }
+
+  const togglePick = (id) => {
+    setPickedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]))
+  }
+
+  const toggleAllPicks = () => {
+    setPickedIds((current) => (current.length === criteria.length ? [] : criteria.map((item) => item.id)))
+  }
+
+  const saveFields = async (event) => {
     event.preventDefault()
     const res = await createCategoryParameter({
       classificationId: fieldFor.id,
-      name: fieldForm.name,
-      maxMarks: Number(fieldForm.maxMarks),
+      criterionIds: pickedIds,
     })
     if (!res.ok) return showToast(res.error, 'error')
-    showToast('Mark field added')
+    showToast('Mark fields saved')
     setFieldFor(null)
-    setFieldForm({ name: '', maxMarks: 10 })
   }
 
   const renderCategory = (item) => {
@@ -119,16 +154,16 @@ export default function ManageClassifications() {
               {winner ? <> Current winner: <strong>{winner.name}</strong></> : ' No winner yet.'}
             </p>
           </div>
-          <label className="price-field">
-            Price
-            <input
-              type="number"
-              min="0"
-              value={prices[item.id] ?? item.price ?? 0}
-              onChange={(event) => setPrices({ ...prices, [item.id]: event.target.value })}
-            />
-          </label>
-          <button className="btn btn-ghost small" onClick={() => savePrice(item)}>Save price</button>
+          <div className="category-actions">
+            <span className="fee-pill">Entry fee Rs.{Number(item.price ?? 0)}</span>
+            <span className="fee-pill">{item.prefix ? `ID ${item.prefix}` : 'No ID prefix'}</span>
+            <button className="btn btn-ghost small" onClick={() => setEditing({ kind: 'category', id: item.id, name: item.name, price: item.price ?? 0, prefix: item.prefix || '' })}>
+              <FiEdit2 /> Edit
+            </button>
+            <button className="icon-btn danger" title="Remove category" onClick={() => removeCategory(item)}>
+              <FiTrash2 />
+            </button>
+          </div>
         </div>
         <p className="muted small">Mark fields for this category. Total {total}.</p>
         <div className="chip-row">
@@ -148,8 +183,8 @@ export default function ManageClassifications() {
               </button>
             </span>
           ))}
-          <button className="btn btn-primary small" onClick={() => { setFieldFor(item); setFieldForm({ name: '', maxMarks: 10 }) }}>
-            <FiPlus /> Add field
+          <button className="btn btn-primary small" onClick={() => openFields(item)}>
+            <FiPlus /> Choose fields
           </button>
         </div>
       </article>
@@ -168,7 +203,7 @@ export default function ManageClassifications() {
       <div className="two-col">
         <div className="panel glass">
           <h2>Age categories</h2>
-          <p className="muted small">Tick Solo or Couple. A couple category is not used for solo.</p>
+          <p className="muted small">Tick Solo, Couple, or Group. The oldest age in a couple or group picks the matching category.</p>
           <form className="form" onSubmit={addBand}>
             <div className="inline-form">
               <input placeholder="Name" value={bandForm.name} onChange={(event) => setBandForm({ ...bandForm, name: event.target.value })} required />
@@ -176,7 +211,7 @@ export default function ManageClassifications() {
               <input type="number" min="1" max="120" value={bandForm.maxAge} onChange={(event) => setBandForm({ ...bandForm, maxAge: event.target.value })} required />
               <button className="btn btn-primary small"><FiPlus /> Add</button>
             </div>
-            <FormatChecks formats={formats.filter((item) => item.key !== 'group')} value={bandForm.formatKeys} onChange={(formatKeys) => setBandForm({ ...bandForm, formatKeys })} />
+            <FormatChecks formats={formats} value={bandForm.formatKeys} onChange={(formatKeys) => setBandForm({ ...bandForm, formatKeys })} />
           </form>
           <table className="table">
             <thead>
@@ -189,12 +224,25 @@ export default function ManageClassifications() {
                   <td>{band.minAge}-{band.maxAge}</td>
                   <td>
                     <FormatChecks
-                      formats={formats.filter((item) => item.key !== 'group')}
+                      formats={formats}
                       value={band.formatKeys || []}
                       onChange={(formatKeys) => saveFormats('band', band, formatKeys)}
                     />
                   </td>
                   <td className="actions">
+                    <button
+                      className="btn btn-ghost small"
+                      onClick={() => setEditing({
+                        kind: 'band',
+                        id: band.id,
+                        name: band.name,
+                        minAge: band.minAge,
+                        maxAge: band.maxAge,
+                        formatKeys: band.formatKeys || [],
+                      })}
+                    >
+                      <FiEdit2 /> Edit
+                    </button>
                     <button
                       className="icon-btn danger"
                       onClick={async () => {
@@ -235,6 +283,17 @@ export default function ManageClassifications() {
                   </td>
                   <td className="actions">
                     <button
+                      className="btn btn-ghost small"
+                      onClick={() => setEditing({
+                        kind: 'type',
+                        id: type.id,
+                        name: type.name,
+                        formatKeys: type.formatKeys || [],
+                      })}
+                    >
+                      <FiEdit2 /> Edit
+                    </button>
+                    <button
                       className="icon-btn danger"
                       onClick={async () => {
                         if (!window.confirm(`Delete type "${type.name}"?`)) return
@@ -258,25 +317,114 @@ export default function ManageClassifications() {
         return (
           <section key={key} className="stack">
             <h2>{FORMAT_LABEL[key]} categories</h2>
+            <p className="muted small">These are created from the age categories and types above. Edit the name and entry fee, or remove the category.</p>
             {list.length ? list.map(renderCategory) : <div className="empty glass">No {FORMAT_LABEL[key].toLowerCase()} categories yet.</div>}
           </section>
         )
       })}
 
-      {fieldFor && (
-        <Modal title={`Add mark field · ${fieldFor.name}`} onClose={() => setFieldFor(null)}>
-          <form className="form" onSubmit={addField}>
+      {editing && (
+        <Modal
+          title={editing.kind === 'band' ? 'Edit age category' : editing.kind === 'type' ? 'Edit participant type' : `Edit · ${editing.name}`}
+          onClose={() => setEditing(null)}
+        >
+          <form className="form" onSubmit={saveEdit}>
             <label>
-              Field name
-              <input value={fieldForm.name} onChange={(event) => setFieldForm({ ...fieldForm, name: event.target.value })} placeholder="Choreography" required />
+              Name
+              <input value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} required />
             </label>
-            <label>
-              Maximum marks
-              <input type="number" min="1" max="100" value={fieldForm.maxMarks} onChange={(event) => setFieldForm({ ...fieldForm, maxMarks: event.target.value })} required />
-            </label>
+            {editing.kind === 'band' && (
+              <div className="inline-form">
+                <label>
+                  From age
+                  <input type="number" min="1" max="120" value={editing.minAge} onChange={(event) => setEditing({ ...editing, minAge: event.target.value })} required />
+                </label>
+                <label>
+                  To age
+                  <input type="number" min="1" max="120" value={editing.maxAge} onChange={(event) => setEditing({ ...editing, maxAge: event.target.value })} required />
+                </label>
+              </div>
+            )}
+            {editing.kind === 'category' && (
+              <label>
+                Entry fee (Rs.)
+                <input type="number" min="0" value={editing.price} onChange={(event) => setEditing({ ...editing, price: event.target.value })} required />
+                <span className="muted small">This is the amount a player pays to register in this category.</span>
+              </label>
+            )}
+            {editing.kind === 'category' && (
+              <label>
+                ID prefix
+                <input
+                  value={editing.prefix || ''}
+                  maxLength={6}
+                  placeholder="KS"
+                  onChange={(event) => setEditing({ ...editing, prefix: event.target.value.toUpperCase() })}
+                />
+                <span className="muted small">Used when a player is marked arrived. Example: KS-01, KS-02.</span>
+              </label>
+            )}
+            {editing.kind !== 'category' && (
+              <div>
+                <span className="label">Can be used in</span>
+                <FormatChecks
+                  formats={formats}
+                  value={editing.formatKeys}
+                  onChange={(formatKeys) => setEditing({ ...editing, formatKeys })}
+                />
+              </div>
+            )}
             <div className="form-actions">
-              <button type="button" className="btn btn-ghost" onClick={() => setFieldFor(null)}>Cancel</button>
-              <button className="btn btn-primary">Add</button>
+              <button type="button" className="btn btn-ghost" onClick={() => setEditing(null)}>Cancel</button>
+              <button className="btn btn-primary">Save</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {fieldFor && (
+        <Modal title={`Mark fields · ${fieldFor.name}`} onClose={() => setFieldFor(null)}>
+          <form className="form mark-field-form" onSubmit={saveFields}>
+            <div className="mark-pick-head">
+              <p>Choose the mark categories judges score for this category.</p>
+              {criteria.length > 0 && (
+                <button type="button" className="link-btn" onClick={toggleAllPicks}>
+                  {pickedIds.length === criteria.length ? 'Clear all' : 'Select all'}
+                </button>
+              )}
+            </div>
+            {criteria.length ? (
+              <div className="mark-picks">
+                {criteria.map((item) => {
+                  const on = pickedIds.includes(item.id)
+                  return (
+                    <label key={item.id} className={`mark-pick ${on ? 'is-on' : ''}`}>
+                      <input type="checkbox" checked={on} onChange={() => togglePick(item.id)} />
+                      <span className="mark-pick-box" aria-hidden="true" />
+                      <span className="mark-pick-name">{item.label}</span>
+                      <span className="mark-pick-max">max {item.maxMarks}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="muted">No mark categories yet. Add them on the Mark Categories page first.</p>
+            )}
+            <div className="mark-pick-foot">
+              <p>
+                <strong>{pickedIds.length}</strong> selected
+                <span>·</span>
+                <strong>
+                  {criteria
+                    .filter((item) => pickedIds.includes(item.id))
+                    .reduce((sum, item) => sum + Number(item.maxMarks || 0), 0)}
+                </strong>{' '}
+                marks
+              </p>
+              <div className="form-actions">
+                <button type="button" className="btn btn-ghost" onClick={() => setFieldFor(null)}>Cancel</button>
+                <button className="btn btn-primary" disabled={!criteria.length}>Save</button>
+              </div>
             </div>
           </form>
         </Modal>
