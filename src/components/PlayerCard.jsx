@@ -67,7 +67,8 @@ export default function PlayerCard({ player, stats, children, showScore = true, 
               <div className="progress-fill" style={{ width: `${stats.percent}%` }} />
             </div>
             <span className="small">
-              {stats.count ? `${stats.avg.toFixed(1)} / ${stats.maxTotal || 0}` : 'No marks yet'}
+              {stats.count ? `Judges ${stats.avg.toFixed(1)} / ${stats.maxTotal || 0}` : 'No judge marks yet'}
+              {stats.publicCount > 0 && ` · Public ${stats.publicAvg.toFixed(1)} (${stats.publicCount} users)`}
               {price != null && ` · Rs.${price}`}
             </span>
           </div>

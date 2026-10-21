@@ -103,20 +103,38 @@ export function AppProvider({ children }) {
 
   const playerStats = useMemo(() => {
     const map = {}
+    const audienceOf = (score) => {
+      if (score.audience === 'public' || score.audience === 'judge') return score.audience
+      return members.some((user) => user.id === score.judgeId) ? 'public' : 'judge'
+    }
+    const mean = (list) => (list.length ? list.reduce((sum, score) => sum + Number(score.total || 0), 0) / list.length : 0)
     for (const player of players) {
       const marks = scores.filter((score) => score.playerId === player.id)
-      const avg = marks.length ? marks.reduce((sum, score) => sum + score.total, 0) / marks.length : 0
+      const judgeScores = marks.filter((score) => audienceOf(score) === 'judge')
+      const publicScores = marks.filter((score) => audienceOf(score) === 'public')
+      const avg = mean(judgeScores)
+      const publicAvg = mean(publicScores)
       const cap = totalMax(criteriaFor(player.classificationId))
       const percent = (avg / cap) * 100
-      const allJudged = activeJudges.length > 0 && activeJudges.every((judge) => marks.some((score) => score.judgeId === judge.id))
+      const allJudged = activeJudges.length > 0 && activeJudges.every((judge) => judgeScores.some((score) => score.judgeId === judge.id))
       let status = 'pending'
       if (player.winner) status = 'winner'
       else if (allJudged) status = percent >= PASS_PERCENT ? 'qualified' : 'rejected'
-      else if (marks.length) status = 'judged'
-      map[player.id] = { scores: marks, count: marks.length, avg, percent, status, maxTotal: cap }
+      else if (judgeScores.length) status = 'judged'
+      map[player.id] = {
+        scores: judgeScores,
+        publicScores,
+        count: judgeScores.length,
+        publicCount: publicScores.length,
+        avg,
+        publicAvg,
+        percent,
+        status,
+        maxTotal: cap,
+      }
     }
     return map
-  }, [players, scores, activeJudges, criteriaFor])
+  }, [players, scores, activeJudges, members, criteriaFor])
 
   const run = async (work) => {
     busy.current += 1
@@ -223,6 +241,7 @@ export function AppProvider({ children }) {
     deleteAccount: (id) => run(() => api.deleteAccount(id)),
     submitScore: (playerId, criteria, comment) => run(() => api.submitScore({ playerId, criteria, comment })),
     toggleWinner: (id) => run(() => api.toggleWinner(id)),
+    findWinners: () => run(() => api.findWinners()),
     setResultsPublished: (resultsPublished) => run(() => api.updateSettings({ resultsPublished })),
     setLivePlayer: (id, live) => run(() => api.setPlayerLive(id, { live })),
     setPlayerArrived: (id, arrived) => run(() => api.setPlayerArrived(id, { arrived })),

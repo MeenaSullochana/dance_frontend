@@ -5,6 +5,7 @@ import { playerPhoto } from '../utils/playerPhoto'
 import { memberLabel } from '../utils/member'
 import Modal from './Modal'
 import StatusBadge from './StatusBadge'
+import MarkRounds from './MarkRounds'
 
 export default function StagePopup({ player, mode, onClose }) {
   const {
@@ -27,7 +28,7 @@ export default function StagePopup({ player, mode, onClose }) {
     Object.fromEntries(
       criteria.map((item) => {
         const saved = existing?.criteria?.[item.key]
-        return [item.key, Number.isInteger(saved) ? Math.min(saved, item.maxMarks) : 0]
+        return [item.key, Number.isInteger(saved) ? Math.min(Math.max(saved, 1), item.maxMarks) : 1]
       }),
     ),
   )
@@ -97,21 +98,13 @@ export default function StagePopup({ player, mode, onClose }) {
           <form className="score-form" onSubmit={saveMarks}>
             <p className="muted small">Categories and maximum marks are set by admin.</p>
             {criteria.map((item) => (
-              <div key={item.key} className="slider-row">
-                <div className="slider-head">
-                  <span>{item.label}</span>
-                  <strong>{marks[item.key] || 0} / {item.maxMarks}</strong>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max={item.maxMarks}
-                  step="1"
-                  value={marks[item.key] || 0}
-                  onChange={(event) => setMarks({ ...marks, [item.key]: Number(event.target.value) })}
-                  style={{ '--val': `${((marks[item.key] || 0) / item.maxMarks) * 100}%` }}
-                />
-              </div>
+              <MarkRounds
+                key={item.key}
+                label={item.label}
+                max={item.maxMarks}
+                value={marks[item.key] || 1}
+                onChange={(value) => setMarks({ ...marks, [item.key]: value })}
+              />
             ))}
             <div className="total-box">
               <span>Total</span>
@@ -126,20 +119,46 @@ export default function StagePopup({ player, mode, onClose }) {
               <FiSave /> {existing ? 'Update marks' : 'Submit marks'}
             </button>
           </form>
+        ) : mode === 'user' && settings.livePlayerId === player.id ? (
+          <form className="score-form" onSubmit={saveMarks}>
+            <p className="muted small">Tap a round for each mark. Your score is averaged with the other users.</p>
+            {criteria.map((item) => (
+              <MarkRounds
+                key={item.key}
+                label={item.label}
+                max={item.maxMarks}
+                value={marks[item.key] || 1}
+                onChange={(value) => setMarks({ ...marks, [item.key]: value })}
+              />
+            ))}
+            <div className="total-box">
+              <span>Your total</span>
+              <strong className="gradient-text">{total} / {maxTotal}</strong>
+            </div>
+            <button className="btn btn-primary full" disabled={saving}>
+              <FiSave /> {existing ? 'Update marks' : 'Submit marks'}
+            </button>
+          </form>
         ) : (
           <div className="stage-note">
             <h3>{player.name} is {settings.livePlayerId === player.id ? 'performing now' : 'selected'}</h3>
             <p className="muted">
               {mode === 'admin'
-                ? 'Judges can mark this performer from the popup. Mark categories are managed under Mark Categories.'
+                ? 'Judges and users can mark this performer while they are live. Winners are chosen from the judge average.'
                 : settings.resultsPublished
-                  ? 'Results are published. Average marks are on the card.'
+                  ? 'Results are published. The winner comes from the judge average.'
                   : 'Marks stay hidden until the admin publishes results.'}
             </p>
             {showScore && stats && (
               <p>
-                Average <strong>{stats.avg.toFixed(1)}</strong>
-                <span className="muted"> / {maxTotal}</span>
+                Judge average <strong>{stats.avg.toFixed(1)}</strong>
+                <span className="muted"> / {maxTotal} · {stats.count} judges</span>
+              </p>
+            )}
+            {showScore && stats?.publicCount > 0 && (
+              <p>
+                Public average <strong>{stats.publicAvg.toFixed(1)}</strong>
+                <span className="muted"> from {stats.publicCount} users</span>
               </p>
             )}
           </div>

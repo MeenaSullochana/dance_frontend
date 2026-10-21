@@ -1580,6 +1580,46 @@ tr.is-alert-row td {
 .score-form h2 {
   margin-bottom: 0;
 }
+.mark-ratio {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mark-ratio-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ratio-box {
+  min-width: 72px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+}
+.mark-rounds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mark-rounds button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+  font-weight: 700;
+}
+.mark-rounds button.on {
+  color: #fff;
+  border-color: transparent;
+  background: var(--grad);
+  box-shadow: 0 0 0 3px rgba(255, 46, 136, 0.28);
+}
 .slider-row {
   display: flex;
   flex-direction: column;

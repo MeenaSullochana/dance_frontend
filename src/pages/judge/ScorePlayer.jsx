@@ -5,6 +5,7 @@ import { useApp } from '../../context/AppContext'
 import StatusBadge from '../../components/StatusBadge'
 import { playerPhoto } from '../../utils/playerPhoto'
 import { memberLabel } from '../../utils/member'
+import MarkRounds from '../../components/MarkRounds'
 
 export default function ScorePlayer() {
   const { id } = useParams()
@@ -15,8 +16,12 @@ export default function ScorePlayer() {
   const maxTotal = criteria.reduce((sum, item) => sum + Number(item.maxMarks || 0), 0) || 1
   const existing = scores.find((s) => s.playerId === id && s.judgeId === currentUser.id)
 
-  const [marks, setMarks] = useState(
-    () => existing?.criteria || Object.fromEntries(criteria.map((item) => [item.key, 0])),
+  const [marks, setMarks] = useState(() =>
+    Object.fromEntries(criteria.map((item) => {
+      const saved = existing?.criteria?.[item.key]
+      const value = Number.isInteger(saved) ? Math.min(Math.max(saved, 1), item.maxMarks) : 1
+      return [item.key, value]
+    })),
   )
   const [comment, setComment] = useState(existing?.comment || '')
 
@@ -63,21 +68,13 @@ export default function ScorePlayer() {
         <form className="panel glass score-form" onSubmit={handleSubmit}>
           <h2>{existing ? 'Edit your marks' : 'Give marks'}</h2>
           {criteria.map((c) => (
-            <div key={c.key} className="slider-row">
-              <div className="slider-head">
-                <span>{c.label}</span>
-                <strong>{marks[c.key] || 0} / {c.maxMarks}</strong>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max={c.maxMarks}
-                step="1"
-                value={marks[c.key] || 0}
-                onChange={(e) => setMarks({ ...marks, [c.key]: Number(e.target.value) })}
-                style={{ '--val': `${((marks[c.key] || 0) / c.maxMarks) * 100}%` }}
-              />
-            </div>
+            <MarkRounds
+              key={c.key}
+              label={c.label}
+              max={c.maxMarks}
+              value={marks[c.key] || 1}
+              onChange={(value) => setMarks({ ...marks, [c.key]: value })}
+            />
           ))}
 
           <div className="total-box">

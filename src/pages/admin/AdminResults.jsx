@@ -6,7 +6,7 @@ import StatusBadge from '../../components/StatusBadge'
 import { playerPhoto } from '../../utils/playerPhoto'
 
 export default function AdminResults() {
-  const { players, playerStats, judges, settings, criteriaFor, classifications, formats, setResultsPublished, toggleWinner, resetDemoData, showToast } = useApp()
+  const { players, playerStats, judges, users, settings, criteriaFor, classifications, formats, setResultsPublished, toggleWinner, findWinners, resetDemoData, showToast } = useApp()
   const [tab, setTab] = useState('single')
   const [expanded, setExpanded] = useState(null)
 
@@ -14,7 +14,13 @@ export default function AdminResults() {
     .filter((p) => p.type === tab)
     .sort((a, b) => playerStats[b.id].avg - playerStats[a.id].avg)
 
-  const judgeName = (id) => judges.find((j) => j.id === id)?.name || 'Removed judge'
+  const judgeName = (id) => judges.find((j) => j.id === id)?.name || users.find((user) => user.id === id)?.name || 'Removed judge'
+
+  const pickWinners = async () => {
+    const res = await findWinners()
+    if (!res.ok) return showToast(res.error, 'error')
+    showToast('Winners set from the highest judge average in each category')
+  }
 
   const togglePublish = async () => {
     const next = !settings.resultsPublished
@@ -38,6 +44,9 @@ export default function AdminResults() {
           <Link to="/" className="link-btn">View website</Link>
         </span>
         <div className="row">
+          <button className="btn btn-ghost" onClick={pickWinners}>
+            <FiAward /> Find winners
+          </button>
           <button className="btn btn-ghost" onClick={handleReset}>
             <FiRefreshCw /> Reset demo data
           </button>
@@ -49,7 +58,7 @@ export default function AdminResults() {
 
       <div className="panel glass">
         <h2>Winners by category</h2>
-        <p className="muted small">A winner is listed only in their own category.</p>
+        <p className="muted small">Find winners uses the judge average in each category. Public average is the sum of each user's marks divided by how many users marked. Five users, with marks that include 20, average those five totals.</p>
         <div className="winner-grid">
           {classifications.filter((item) => item.kind === 'category').map((item) => {
             const winner = players.find((player) => player.winner && player.classificationId === item.id)
@@ -77,7 +86,7 @@ export default function AdminResults() {
       <div className="panel glass">
         <table className="table">
           <thead>
-            <tr><th>#</th><th>Player</th><th>Judges</th><th>Average</th><th>Status</th><th></th></tr>
+            <tr><th>#</th><th>Player</th><th>Judges</th><th>Judge avg</th><th>Public avg</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
             {ranked.map((p, i) => {
@@ -98,6 +107,7 @@ export default function AdminResults() {
                     </td>
                     <td>{st.count}</td>
                     <td><strong>{st.avg.toFixed(1)}</strong><span className="muted">/{st.maxTotal}</span> <span className="muted small">({st.percent.toFixed(0)}%)</span></td>
+                    <td>{st.publicCount ? <><strong>{st.publicAvg.toFixed(1)}</strong><span className="muted small"> · {st.publicCount} users</span></> : <span className="muted">—</span>}</td>
                     <td><StatusBadge status={st.status} /></td>
                     <td className="actions">
                       <button
@@ -114,12 +124,12 @@ export default function AdminResults() {
                   </tr>
                   {open && (
                     <tr className="detail-row">
-                      <td colSpan="6">
-                        {st.scores.length ? (
+                      <td colSpan="7">
+                        {st.scores.length || st.publicScores.length ? (
                           <div className="score-detail">
-                            {st.scores.map((s) => (
+                            {[...st.scores, ...st.publicScores].map((s) => (
                               <div key={s.id} className="score-detail-item">
-                                <strong>{judgeName(s.judgeId)}</strong>
+                                <strong>{s.audience === 'public' ? 'Public · ' : 'Judge · '}{judgeName(s.judgeId)}</strong>
                                 <div className="criteria-mini">
                                   {criteriaFor(p.classificationId).map((c) => (
                                     <span key={c.key}>{c.label}: <b>{s.criteria?.[c.key] ?? '—'}</b></span>

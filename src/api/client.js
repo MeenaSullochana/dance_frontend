@@ -53,6 +53,7 @@ export const createPlayer = (body) => request('/players', { method: 'POST', body
 export const updatePlayer = (id, body) => request(`/players/${id}`, { method: 'PATCH', body })
 export const deletePlayer = (id) => request(`/players/${id}`, { method: 'DELETE' })
 export const toggleWinner = (id) => request(`/players/${id}/winner`, { method: 'PATCH' })
+export const findWinners = () => request('/scores/winners', { method: 'POST' })
 export const createAccount = (body) => request('/accounts', { method: 'POST', body })
 export const approveAccount = (id) => request(`/accounts/${id}/approve`, { method: 'PATCH' })
 export const toggleAccount = (id) => request(`/accounts/${id}/toggle`, { method: 'PATCH' })
