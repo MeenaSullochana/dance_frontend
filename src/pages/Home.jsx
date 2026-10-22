@@ -40,6 +40,7 @@ import FloatingContact from '../components/FloatingContact'
 import SiteFooter from '../components/SiteFooter'
 import { SOCIAL_LINKS } from '../constants/contact'
 import { playerPhoto } from '../utils/playerPhoto'
+import { categoryPlaces, PLACE_LABELS } from '../utils/podium'
 import { memberLabel } from '../utils/member'
 import { homePath } from '../constants/scoring'
 import { DANCE_STYLES, STYLE_GROUPS } from '../constants/danceStyles'
@@ -120,7 +121,7 @@ const GALLERY = [
 ]
 
 export default function Home() {
-  const { players, playerStats, settings, currentUser, judges, maxTotal } = useApp()
+  const { players, playerStats, settings, currentUser, judges, maxTotal, classifications } = useApp()
   const [tab, setTab] = useState('single')
   const [styleGroup, setStyleGroup] = useState('All')
   const [showAllStyles, setShowAllStyles] = useState(false)
@@ -566,16 +567,33 @@ export default function Home() {
           </div>
         ) : (
           <>
-            {winners.length > 0 && (
+            {(settings.podium?.overallId || winners.length > 0) && (
               <div className="winners">
                 <h2 className="section-title"><GiLaurelCrown className="title-icon gold" /> Champions</h2>
+                {settings.podium?.overallId && (
+                  <p className="podium-overall">Overall first: <strong>{players.find((player) => player.id === settings.podium.overallId)?.name}</strong></p>
+                )}
                 <div className="winner-grid">
-                  {winners.map((w) => (
-                    <div key={w.id} className="winner-card glass">
-                      <GiTrophyCup className="winner-trophy" />
-                      <img src={playerPhoto(w)} alt={w.name} />
-                      <h3>{w.name}</h3>
-                      <span className="muted small">{w.category} · {w.type === 'group' ? 'Group' : 'Solo'}</span>
+                  {(classifications || []).filter((item) => item.kind === 'category').map((item) => {
+                    const places = categoryPlaces(settings.podium, item.id)
+                    if (!places.length) return null
+                    return (
+                      <div key={item.id} className="winner-slot glass">
+                        <strong>{item.name}</strong>
+                        {places.map((place) => (
+                          <span key={place.place} className="place-line">
+                            <span>{PLACE_LABELS[place.place]}</span>
+                            <b>{players.find((player) => player.id === place.playerId)?.name || '—'}</b>
+                          </span>
+                        ))}
+                      </div>
+                    )
+                  })}
+                  {(settings.podium?.styles || []).map((item) => (
+                    <div key={item.danceStyle} className="winner-slot glass">
+                      <span className="muted small">Choreography</span>
+                      <strong>{item.danceStyle}</strong>
+                      <span className="place-line"><span>Winner</span><b>{players.find((player) => player.id === item.playerId)?.name || '—'}</b></span>
                     </div>
                   ))}
                 </div>

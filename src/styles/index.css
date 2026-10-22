@@ -674,6 +674,15 @@ input[type='file'] {
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.04);
 }
+.place-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.86rem;
+}
+.podium-overall {
+  margin: 8px 0 0;
+}
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

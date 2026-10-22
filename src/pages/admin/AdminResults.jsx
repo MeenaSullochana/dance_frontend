@@ -4,6 +4,7 @@ import { FiAward, FiEye, FiEyeOff, FiRefreshCw, FiUser, FiUsers } from 'react-ic
 import { useApp } from '../../context/AppContext'
 import StatusBadge from '../../components/StatusBadge'
 import { playerPhoto } from '../../utils/playerPhoto'
+import { categoryPlaces, PLACE_LABELS } from '../../utils/podium'
 
 export default function AdminResults() {
   const { players, playerStats, judges, users, settings, criteriaFor, classifications, formats, setResultsPublished, toggleWinner, findWinners, resetDemoData, showToast } = useApp()
@@ -19,7 +20,7 @@ export default function AdminResults() {
   const pickWinners = async () => {
     const res = await findWinners()
     if (!res.ok) return showToast(res.error, 'error')
-    showToast('Winners set from the highest judge average in each category')
+    showToast('Places set from the judge average')
   }
 
   const togglePublish = async () => {
@@ -57,21 +58,43 @@ export default function AdminResults() {
       </div>
 
       <div className="panel glass">
-        <h2>Winners by category</h2>
-        <p className="muted small">Find winners uses the judge average in each category. Public average is the sum of each user's marks divided by how many users marked. Five users, with marks that include 20, average those five totals.</p>
+        <h2>Results board</h2>
+        <p className="muted small">Find winners ranks by judge average. Each category gets a winner and three runner-ups. The overall first place is shown once and is not repeated as a category or choreography winner. A choreography winner is the best in that dance style who did not win a category.</p>
+        {settings.podium?.overallId && (
+          <p className="podium-overall">Overall first: <strong>{players.find((player) => player.id === settings.podium.overallId)?.name || '—'}</strong> <span className="muted small">{settings.podium.overallAverage}</span></p>
+        )}
         <div className="winner-grid">
           {classifications.filter((item) => item.kind === 'category').map((item) => {
-            const winner = players.find((player) => player.winner && player.classificationId === item.id)
+            const places = categoryPlaces(settings.podium, item.id)
             const format = formats.find((entry) => entry.id === item.formatId)?.name
             return (
               <div key={item.id} className="winner-slot">
                 <span className="muted small">{format}</span>
                 <strong>{item.name}</strong>
-                <span>{winner ? winner.name : 'No winner'}</span>
+                {places.length ? places.map((place) => (
+                  <span key={place.place} className="place-line">
+                    <span>{PLACE_LABELS[place.place]}</span>
+                    <b>{players.find((player) => player.id === place.playerId)?.name || '—'}</b>
+                  </span>
+                )) : <span className="muted">No places yet</span>}
               </div>
             )
           })}
         </div>
+        {settings.podium?.styles?.length > 0 && (
+          <>
+            <h3>Choreography</h3>
+            <div className="winner-grid">
+              {settings.podium.styles.map((item) => (
+                <div key={item.danceStyle} className="winner-slot">
+                  <span className="muted small">Dance style</span>
+                  <strong>{item.danceStyle}</strong>
+                  <span className="place-line"><span>Winner</span><b>{players.find((player) => player.id === item.playerId)?.name || '—'}</b></span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="tabs">

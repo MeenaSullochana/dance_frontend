@@ -33,7 +33,7 @@ export default function ManageUsers() {
       <PendingRegistrations accounts={pendingMembers} />
 
       <div className="toolbar">
-        <p className="muted grow">Users can log in to view players and published results.</p>
+        <p className="muted grow">Add a user here, or they can sign up with an email or mobile number. The same password lets them in.</p>
         <button className="btn btn-primary" onClick={() => setShowForm(true)}>
           <FiPlus /> Add User
         </button>
@@ -42,7 +42,7 @@ export default function ManageUsers() {
       <div className="panel glass">
         <table className="table">
           <thead>
-            <tr><th>User</th><th>Email</th><th>Status</th><th></th></tr>
+            <tr><th>User</th><th>Email or mobile</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
             {members.map((u) => (
@@ -53,7 +53,7 @@ export default function ManageUsers() {
                     <strong>{u.name}</strong>
                   </div>
                 </td>
-                <td className="muted">{u.email}</td>
+                <td className="muted">{u.email || u.phone || '—'}</td>
                 <td>
                   <span className={`badge ${u.active ? 'badge-qualified' : 'badge-rejected'}`}>
                     {u.active ? 'Active' : 'Inactive'}

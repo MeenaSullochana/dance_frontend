@@ -84,7 +84,7 @@ export default function AdminDashboard() {
         <Link to="/admin/users" className="glass admin-shortcut">
           <FiUser />
           <strong>Users</strong>
-          <span className="muted small">Approve public registrations before they can sign in.</span>
+          <span className="muted small">Add a user, or they can sign up with an email or mobile number.</span>
         </Link>
         <Link to="/admin/results" className="glass admin-shortcut">
           <FiAward />

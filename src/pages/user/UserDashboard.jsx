@@ -3,6 +3,7 @@ import { FiAward, FiRadio } from 'react-icons/fi'
 import { useApp } from '../../context/AppContext'
 import PlayerCard from '../../components/PlayerCard'
 import StagePopup from '../../components/StagePopup'
+import { categoryPlaces, PLACE_LABELS } from '../../utils/podium'
 
 export default function UserDashboard() {
   const { players, playerStats, settings, currentUser, participantTypes, classifications } = useApp()
@@ -48,23 +49,49 @@ export default function UserDashboard() {
       )}
       {published && (
         <div className="panel glass">
-          <h2><FiAward /> Winners by category</h2>
-          <p className="muted small">Each category has its own winner. A winner is not listed under any other category.</p>
+          <h2><FiAward /> Results</h2>
+          <p className="muted small">Each category shows a winner and three runner-ups. The overall first place is not repeated there. Choreography winners are the best in that dance style who did not win a category.</p>
+          {settings.podium?.overallId && (
+            <p className="podium-overall">Overall first: <strong>{players.find((player) => player.id === settings.podium.overallId)?.name}</strong></p>
+          )}
           <div className="winner-grid">
             {classifications.filter((item) => item.kind === 'category').map((item) => {
+              const places = categoryPlaces(settings.podium, item.id)
               const winner = winners.find((player) => player.classificationId === item.id)
               return (
                 <div key={item.id} className="winner-slot">
                   <strong>{item.name}</strong>
-                  {winner ? (
+                  {places.length ? places.map((place) => {
+                    const person = players.find((player) => player.id === place.playerId)
+                    return person ? (
+                      <div key={place.place}>
+                        <span className="muted small">{PLACE_LABELS[place.place]}</span>
+                        <PlayerCard player={person} stats={playerStats[person.id]} showScore />
+                      </div>
+                    ) : null
+                  }) : winner ? (
                     <PlayerCard player={winner} stats={playerStats[winner.id]} showScore />
                   ) : (
-                    <span className="muted">No winner</span>
+                    <span className="muted">No places yet</span>
                   )}
                 </div>
               )
             })}
           </div>
+          {settings.podium?.styles?.length > 0 && (
+            <div className="winner-grid">
+              {settings.podium.styles.map((item) => {
+                const person = players.find((player) => player.id === item.playerId)
+                return (
+                  <div key={item.danceStyle} className="winner-slot">
+                    <span className="muted small">Choreography</span>
+                    <strong>{item.danceStyle}</strong>
+                    {person ? <PlayerCard player={person} stats={playerStats[person.id]} showScore /> : <span className="muted">No winner</span>}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 

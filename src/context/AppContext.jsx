@@ -166,11 +166,20 @@ export function AppProvider({ children }) {
   }
 
   const register = async (body) => {
+    busy.current += 1
+    generation.current += 1
     try {
-      await api.register(body)
+      const payload = await api.register(body)
+      if (payload.token) {
+        api.setToken(payload.token)
+        apply(payload)
+        return { ok: true, user: payload.user }
+      }
       return { ok: true }
     } catch (error) {
       return { ok: false, error: error.message }
+    } finally {
+      busy.current -= 1
     }
   }
 

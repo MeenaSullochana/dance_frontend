@@ -15,7 +15,7 @@ const EMPTY_FORM = { name: '', email: '', password: '', confirm: '' }
 const labelOf = (role) => ROLES.find((r) => r.value === role)?.label || role
 
 export default function Login() {
-  const { login, register, currentUser, showToast } = useApp()
+  const { login, register, currentUser } = useApp()
   const navigate = useNavigate()
   const location = useLocation()
   const [mode, setMode] = useState(location.state?.mode === 'register' ? 'register' : 'login')
@@ -47,13 +47,10 @@ export default function Login() {
 
     setLoading(true)
     if (isRegister) {
-      const res = await register({ ...form, role })
+      const res = await register({ name: form.name, email: form.email, password: form.password, role: 'user' })
       setLoading(false)
       if (!res.ok) return setError(res.error)
-      showToast('Registration sent to admin')
-      setForm({ ...EMPTY_FORM, email: form.email })
-      setMode('login')
-      setSuccess(`Registered as ${labelOf(role)}! You can log in once the admin approves your account.`)
+      if (res.user) return navigate(homePath(res.user.role))
       return
     }
     const res = await login(form.email, form.password, role)
@@ -79,7 +76,7 @@ export default function Login() {
           <img src={rcmnEmblem} alt="Rotary Club of Madras North" className="logo-emblem" />
         </div>
         <h1 className="gradient-text">Dance Championship</h1>
-        <p className="muted">{isRegister ? 'Create a new account' : 'Sign in to continue'}</p>
+        <p className="muted">{role === 'user' ? 'Use your email or mobile number and password' : isRegister ? 'Create a new account' : 'Sign in to continue'}</p>
 
         <div className="tabs full">
           {['login', 'register'].map((m) => (
@@ -117,7 +114,14 @@ export default function Login() {
         )}
         <label className="input-icon">
           <FiMail />
-          <input type="email" placeholder="Email" value={form.email} onChange={set('email')} required />
+          <input
+            type={role === 'user' ? 'text' : 'email'}
+            placeholder={role === 'user' ? 'Email or mobile number' : 'Email'}
+            value={form.email}
+            onChange={set('email')}
+            required
+            autoComplete="username"
+          />
         </label>
         <label className="input-icon">
           <FiLock />
@@ -152,7 +156,7 @@ export default function Login() {
 
         {isRegister ? (
           <p className="muted small center">
-            New accounts need admin approval before login. Judge accounts are created by the admin.
+            The same email or mobile number and password signs you in. A different password shows already registered. An admin can also create a user.
           </p>
         ) : (
           <div className="demo-box">

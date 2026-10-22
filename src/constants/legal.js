@@ -48,7 +48,7 @@ export const TERMS = {
     {
       heading: 'Website Accounts',
       points: [
-        'Admin, judge and user accounts are created or approved by the organising committee.',
+        'Admin and judge accounts are created by the organising committee. A visitor can sign up as a user with an email or mobile number and a password.',
         'Keep your login details private. You are responsible for activity carried out under your account.',
         'Accounts may be suspended or removed if they are misused or if the information provided is found to be false.',
       ],
