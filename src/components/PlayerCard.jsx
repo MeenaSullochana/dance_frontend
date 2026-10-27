@@ -22,7 +22,9 @@ const FEE_LABEL = {
 
 export default function PlayerCard({ player, stats, children, showScore = true, participantTypes = [], live = false }) {
   const { classifications } = useApp()
-  const price = classifications.find((item) => item.id === player.classificationId)?.price
+  const category = classifications.find((item) => item.id === player.classificationId)
+  const parent = category?.parentId && classifications.find((item) => item.id === category.parentId)
+  const price = parent ? parent.price : category?.price
   const format = formatLabel(player)
   const FormatIcon = format.icon
   const typeName = participantTypes.find((item) => item.id === player.participantTypeId)?.name

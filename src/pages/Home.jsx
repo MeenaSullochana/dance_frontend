@@ -14,6 +14,7 @@ import {
   FiChevronDown,
   FiChevronUp,
   FiClock,
+  FiDownload,
 } from 'react-icons/fi'
 import {
   GiMusicalNotes,
@@ -52,6 +53,7 @@ const EVENT = {
 }
 
 const REGISTER_FORM_URL = 'https://forms.gle/DfZcNMxHF6HdS6HV6'
+const APP_DOWNLOAD_URL = 'https://apk.senatespace.in/'
 
 const REGISTER_PERKS = [
   { icon: FiUser, title: 'Solo', text: 'Showcase your own style' },
@@ -171,6 +173,9 @@ export default function Home() {
             <a href={REGISTER_FORM_URL} target="_blank" rel="noreferrer" className="btn btn-ghost">
               <FiUserPlus /> Register Now
             </a>
+            <a href={APP_DOWNLOAD_URL} target="_blank" rel="noreferrer" className="btn btn-ghost">
+              <FiDownload /> Download App
+            </a>
           </div>
           <div className="hero-stats">
             {stats.map(({ icon: Icon, value, label, to, state }) => {
@@ -235,6 +240,9 @@ export default function Home() {
             <div className="register-actions">
               <a href={REGISTER_FORM_URL} target="_blank" rel="noreferrer" className="btn btn-primary register-btn">
                 <FiEdit3 /> Fill Registration Form <FiArrowRight />
+              </a>
+              <a href={APP_DOWNLOAD_URL} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                <FiDownload /> Download App
               </a>
               <span className="register-meta">
                 <FiCalendar /> {EVENT.date} · <FiClock /> {EVENT.time}
@@ -307,7 +315,7 @@ export default function Home() {
               forward-looking spirit of Rotary.
             </p>
           </div>
-          <img src={dodImages.museumTheatre} alt="Ethiraj College Auditorium" className="feature-img" />
+          <img src={dodImages.ethirajCollege} alt="Ethiraj College Auditorium" className="feature-img" />
         </div>
       </section>
 
@@ -384,7 +392,10 @@ export default function Home() {
                   <p className="podium-overall">Overall first: <strong>{players.find((player) => player.id === settings.podium.overallId)?.name}</strong></p>
                 )}
                 <div className="winner-grid">
-                  {(classifications || []).filter((item) => item.kind === 'category').map((item) => {
+                  {(classifications || []).filter((item) => {
+                    if (item.kind !== 'category') return false
+                    return !(classifications || []).some((row) => row.parentId === item.id)
+                  }).map((item) => {
                     const places = categoryPlaces(settings.podium, item.id)
                     if (!places.length) return null
                     return (

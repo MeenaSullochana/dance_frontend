@@ -75,7 +75,7 @@ export default function UserDashboard() {
             <p className="podium-overall">Overall first: <strong>{players.find((player) => player.id === settings.podium.overallId)?.name}</strong></p>
           )}
           <div className="winner-grid">
-            {classifications.filter((item) => item.kind === 'category').map((item) => {
+            {classifications.filter((item) => item.kind === 'category' && !classifications.some((row) => row.parentId === item.id)).map((item) => {
               const places = categoryPlaces(settings.podium, item.id)
               const winner = winners.find((player) => player.classificationId === item.id)
               return (

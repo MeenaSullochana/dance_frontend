@@ -321,12 +321,21 @@ export function AppProvider({ children }) {
   }
 
   if (offline) {
+    const local = SITE.backendUrl.includes('localhost') || SITE.backendUrl.includes('127.0.0.1')
     return (
       <div className="boot">
         <div className="boot-card glass">
-          <strong>Server is not running</strong>
+          <strong>Cannot reach the API</strong>
           <p className="muted">
-            The API at <b>{SITE.backendUrl}</b> is offline. In the project root run <b>npm run dev</b> so both the API and website start together. Then click Try again.
+            {local ? (
+              <>
+                The API at <b>{SITE.backendUrl}</b> is offline. From the project root run <b>npm run dev</b> so the API and website start together, then click Try again.
+              </>
+            ) : (
+              <>
+                The live API at <b>{SITE.backendUrl}</b> did not respond. Make sure the backend Node app is deployed and running, and that this website origin is allowed in CORS. Then click Try again.
+              </>
+            )}
           </p>
           <button className="btn btn-primary" onClick={retry}>Try again</button>
         </div>

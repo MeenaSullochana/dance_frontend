@@ -27,6 +27,7 @@ import dodDancers from './dod/dod-dancers.jpg'
 import danceFit from './dod/dance-fit.jpg'
 import danceCouple from './dod/dance-couple.png'
 import museumTheatre from './dod/museum-theatre.jpg'
+import ethirajCollege from './dod/ethiraj-college.png'
 import fusionFinale from './dod/fusion-finale.jpg'
 import compass from './dod/compass.jpg'
 
@@ -48,6 +49,7 @@ export const dodImages = {
   danceFit,
   danceCouple,
   museumTheatre,
+  ethirajCollege,
   fusionFinale,
   compass,
 }

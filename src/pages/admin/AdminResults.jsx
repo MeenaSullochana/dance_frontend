@@ -64,7 +64,7 @@ export default function AdminResults() {
           <p className="podium-overall">Overall first: <strong>{players.find((player) => player.id === settings.podium.overallId)?.name || '—'}</strong> <span className="muted small">{settings.podium.overallAverage}</span></p>
         )}
         <div className="winner-grid">
-          {classifications.filter((item) => item.kind === 'category').map((item) => {
+          {classifications.filter((item) => item.kind === 'category' && !classifications.some((row) => row.parentId === item.id)).map((item) => {
             const places = categoryPlaces(settings.podium, item.id)
             const format = formats.find((entry) => entry.id === item.formatId)?.name
             return (

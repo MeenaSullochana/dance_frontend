@@ -93,18 +93,26 @@ function placedCategory(form, { classifications, ageBands, formats }) {
   const oldest = ages.length ? Math.max(...ages) : null
   const formatId = formats.find((item) => item.key === formatKey)?.id
   const options = classifications.filter((item) => item.kind === 'category' && item.formatId === formatId)
+  if (formatKey === 'group') {
+    const match = options.find((item) => item.participantTypeId === form.participantTypeId)
+    if (match) {
+      const parent = match.parentId && options.find((item) => item.id === match.parentId)
+      return { name: parent ? `${parent.name} / ${match.name}` : match.name, oldest }
+    }
+    const mixed = options.find((item) => /mixed/i.test(item.name))
+    if (mixed) {
+      const parent = mixed.parentId && options.find((item) => item.id === mixed.parentId)
+      return { name: parent ? `${parent.name} / ${mixed.name}` : mixed.name, oldest }
+    }
+    return { name: '', oldest }
+  }
   if (oldest != null) {
     const covering = ageBands.filter(
       (item) => item.active !== false && bandCoversAge(item, oldest),
     )
     const scoped = covering.filter((item) => (item.formatKeys || []).includes(formatKey))
-    const band = narrowestBand(scoped.length ? scoped : formatKey === 'group' ? covering : [])
+    const band = narrowestBand(scoped.length ? scoped : [])
     const match = band && options.find((item) => item.ageBandId === band.id)
-    if (match) return { name: match.name, oldest }
-    if (band && formatKey === 'group') return { name: `${band.name} · Group`, oldest }
-  }
-  if (formatKey === 'group' && oldest == null && form.participantTypeId) {
-    const match = options.find((item) => item.participantTypeId === form.participantTypeId)
     if (match) return { name: match.name, oldest }
   }
   return { name: '', oldest }
