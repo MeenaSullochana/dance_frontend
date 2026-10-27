@@ -39,10 +39,10 @@ export default function ManageJudges() {
         </button>
       </div>
 
-      <div className="panel glass">
+      <div className="panel glass desk-list">
         <table className="table">
           <thead>
-            <tr><th>Judge</th><th>Email</th><th>Scored</th><th>Status</th><th></th></tr>
+            <tr><th>Judge</th><th>Contact</th><th>Scored</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
             {judges.map((j) => {
@@ -50,28 +50,27 @@ export default function ManageJudges() {
               return (
                 <tr key={j.id}>
                   <td>
-                    <div className="row">
-                      <img src={judgeAvatar} alt="" className="avatar" />
-                      <strong>{j.name}</strong>
+                    <div className="who">
+                      <img src={judgeAvatar} alt="" />
+                      <span>
+                        <strong>{j.name}</strong>
+                        <span className="muted small">Judge</span>
+                      </span>
                     </div>
                   </td>
-                  <td className="muted">{j.email}</td>
+                  <td className="muted small">{j.email || '—'}</td>
+                  <td><span className="desk-pill id">{count} / {players.length}</span></td>
                   <td>
-                    {count} / {players.length}
-                  </td>
-                  <td>
-                    <span className={`badge ${j.active ? 'badge-qualified' : 'badge-rejected'}`}>
-                      {j.active ? 'Active' : 'Inactive'}
-                    </span>
+                    <span className={`desk-pill ${j.active ? 'received' : 'alert'}`}>{j.active ? 'Active' : 'Inactive'}</span>
                   </td>
                   <td className="actions">
-                    <button className="icon-btn" title={j.active ? 'Deactivate' : 'Activate'} onClick={async () => {
+                    <button className="btn btn-ghost small" onClick={async () => {
                       const res = await toggleAccount(j.id)
                       if (!res.ok) showToast(res.error, 'error')
                     }}>
-                      {j.active ? <FiToggleRight /> : <FiToggleLeft />}
+                      {j.active ? <FiToggleRight /> : <FiToggleLeft />} {j.active ? 'Active' : 'Off'}
                     </button>
-                    <button className="icon-btn danger" title="Delete" onClick={() => handleDelete(j)}>
+                    <button className="btn btn-danger small" onClick={() => handleDelete(j)}>
                       <FiTrash2 />
                     </button>
                   </td>

@@ -8,9 +8,7 @@ const QUICK_LINKS = [
   { label: 'Register', href: '/#register' },
   { label: 'Venue', href: '/#venue' },
   { label: 'Dance Styles', href: '/#styles' },
-  { label: 'How It Works', href: '/#how' },
   { label: 'Results', href: '/#results' },
-  { label: 'Gallery', href: '/#gallery' },
   { label: 'Contact', href: '/#contact' },
 ]
 

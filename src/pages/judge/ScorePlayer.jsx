@@ -61,8 +61,8 @@ export default function ScorePlayer() {
 
         {!live ? (
           <div className="panel glass score-form">
-            <h2>Marks are closed</h2>
-            <p className="muted">Marks open only while the admin has this participant live.</p>
+            <h2>Voting closed</h2>
+            <p className="muted">Voting lines will open only during/ after the performance</p>
           </div>
         ) : (
         <form className="panel glass score-form" onSubmit={handleSubmit}>
@@ -79,7 +79,7 @@ export default function ScorePlayer() {
 
           <div className="total-box">
             <span>Total</span>
-            <strong className="gradient-text">{total} / {maxTotal}</strong>
+            <strong className="gradient-text">{total}({maxTotal})</strong>
             <span className="muted small">{percent.toFixed(0)}%</span>
           </div>
 

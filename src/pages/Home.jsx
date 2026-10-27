@@ -14,25 +14,16 @@ import {
   FiChevronDown,
   FiChevronUp,
   FiClock,
-  FiHeart,
-  FiStar,
-  FiGlobe,
-  FiTrendingUp,
 } from 'react-icons/fi'
 import {
   GiMusicalNotes,
-  GiTrophyCup,
-  GiTheaterCurtains,
   GiLaurelCrown,
   GiBallerinaShoes,
   GiPartyPopper,
 } from 'react-icons/gi'
 import { TbInfinity } from 'react-icons/tb'
-import { FaHandshake, FaQuoteLeft } from 'react-icons/fa'
 import { useApp } from '../context/AppContext'
 import { dancePhotos, dodImages, sliderImages, rotaryDistrictLogo, dodLogo, rcmnEmblem } from '../assets/images'
-import bharatanatyamPhoto from '../assets/images/styles/bharatanatyam.jpg'
-import folkPhoto from '../assets/images/styles/folk.jpg'
 import StatusBadge from '../components/StatusBadge'
 import HeroSlider from '../components/HeroSlider'
 import ContactSection from '../components/ContactSection'
@@ -43,6 +34,7 @@ import { playerPhoto } from '../utils/playerPhoto'
 import { categoryPlaces, PLACE_LABELS } from '../utils/podium'
 import { memberLabel } from '../utils/member'
 import { homePath } from '../constants/scoring'
+import { participantsPath } from '../utils/participantType'
 import { DANCE_STYLES, STYLE_GROUPS } from '../constants/danceStyles'
 
 const MEDALS = ['🥇', '🥈', '🥉']
@@ -50,13 +42,6 @@ const MEDALS = ['🥇', '🥈', '🥉']
 const SLIDES = sliderImages
 
 const STYLES_PREVIEW = 10
-
-const STEPS = [
-  { icon: FiUserPlus, title: 'Register', text: 'Users sign up and the admin approves them. Judges are added by the admin.' },
-  { icon: GiTheaterCurtains, title: 'Perform', text: 'Solo dancers and groups take the stage in their category.' },
-  { icon: FiEdit3, title: 'Get Scored', text: 'Judges mark technique, expression, timing and costume.' },
-  { icon: GiTrophyCup, title: 'Win', text: 'Top scorers qualify and champions are crowned live.' },
-]
 
 const EVENT = {
   date: '31st October 2026',
@@ -79,47 +64,6 @@ const CLUB_LEADERS = [
   { name: 'Rtn. Divya Subramanian', title: 'Secretary', image: dodImages.secretary, icon: FiEdit3 },
 ]
 
-const GATHERING = [
-  {
-    icon: FiUsers,
-    title: 'Family of Rotary',
-    text: 'This event is exclusively curated for Rotarians and their families. It is a dedicated space to bond, relax, and celebrate our shared values outside of service projects.',
-  },
-  {
-    icon: FaHandshake,
-    title: 'Inter-District Spirit',
-    text: 'We are honored to invite neighboring districts to join District 3233. This multi-district participation fosters stronger regional ties and cross-district fellowship.',
-  },
-]
-
-const PILLARS = [
-  { icon: FiHeart, title: 'Bonding', text: 'Strengthening the internal fabric of our clubs through shared art.' },
-  { icon: FiStar, title: 'Talent', text: 'Discovering the hidden artistic gems within our Rotary families.' },
-  { icon: FiGlobe, title: 'Unity', text: 'Building a unified regional Rotary presence across districts.' },
-]
-
-const TRADITIONS = [
-  { title: 'Folk Heritage Round', src: folkPhoto },
-  { title: 'Fusion Finale', src: dodImages.fusionFinale },
-]
-
-const GROWTH = [
-  { x: 0, y: 262, label: 'Previous Years' },
-  { x: 198, y: 225 },
-  { x: 399, y: 248 },
-  { x: 601, y: 150, label: 'District 3233 Launch' },
-  { x: 1000, y: 76, label: '2025 Inter-District' },
-]
-const GROWTH_LINE = GROWTH.map((p) => `${p.x},${p.y}`).join(' ')
-
-const GALLERY = [
-  { src: dodImages.danceOfDistrict, alt: 'Dance of District' },
-  { src: dodImages.dodRibbons, alt: 'Dance of District – Organized by Rotary Club of Madras North' },
-  { src: dodImages.dodDancers, alt: 'Dance of District – DOD, RCM North, 31st Oct' },
-  { src: dodImages.danceFit, alt: 'Dance Fit' },
-  { src: dodImages.danceCouple, alt: 'Dance' },
-]
-
 export default function Home() {
   const { players, playerStats, settings, currentUser, judges, maxTotal, classifications } = useApp()
   const [tab, setTab] = useState('single')
@@ -139,11 +83,34 @@ export default function Home() {
 
   const winners = players.filter((p) => p.winner)
 
+  const role = currentUser?.role
   const stats = [
-    { icon: FiUser, value: players.filter((p) => p.type === 'single').length, label: 'Solo' },
-    { icon: FiUsers, value: players.filter((p) => p.type === 'group').length, label: 'Groups' },
-    { icon: FiUserCheck, value: judges.length, label: 'Judges' },
-    { icon: GiBallerinaShoes, value: DANCE_STYLES.length, label: 'Styles' },
+    {
+      icon: FiUser,
+      value: players.filter((p) => p.type === 'single').length,
+      label: 'Solo',
+      to: role ? participantsPath(role, 'single') : '/login',
+      state: role ? undefined : { audience: true },
+    },
+    {
+      icon: FiUsers,
+      value: players.filter((p) => p.type === 'group').length,
+      label: 'Groups',
+      to: role ? participantsPath(role, 'group') : '/login',
+      state: role ? undefined : { audience: true },
+    },
+    {
+      icon: FiUserCheck,
+      value: judges.length,
+      label: 'Judges',
+      to: role === 'admin' ? '/admin/judges' : role ? homePath(role) : '/login',
+    },
+    {
+      icon: GiBallerinaShoes,
+      value: DANCE_STYLES.length,
+      label: 'Styles',
+      to: '#styles',
+    },
   ]
 
   return (
@@ -164,7 +131,7 @@ export default function Home() {
         </a>
 
         <div className="nav-right">
-          <Link to={currentUser ? homePath(currentUser.role) : '/login'} className="btn btn-primary">
+          <Link to={currentUser ? homePath(currentUser.role) : '/login'} state={currentUser ? undefined : { audience: true }} className="btn btn-primary">
             <FiLogIn /> <span className="nav-login-text">{currentUser ? 'Dashboard' : 'Login'}</span>
           </Link>
         </div>
@@ -192,21 +159,41 @@ export default function Home() {
             <span><FiMapPin /> {EVENT.venue}</span>
           </div>
           <div className="hero-actions">
-            <a href="#results" className="btn btn-primary">
-              <FiAward /> View Results
-            </a>
+            {currentUser ? (
+              <Link to={homePath(currentUser.role)} className="btn btn-primary">
+                <FiLogIn /> Open Dashboard
+              </Link>
+            ) : (
+              <Link to="/login" state={{ audience: true }} className="btn btn-primary">
+                <FiLogIn /> Login as Audience
+              </Link>
+            )}
             <a href={REGISTER_FORM_URL} target="_blank" rel="noreferrer" className="btn btn-ghost">
               <FiUserPlus /> Register Now
             </a>
           </div>
           <div className="hero-stats">
-            {stats.map(({ icon: Icon, value, label }) => (
-              <div key={label}>
-                <Icon className="hero-stat-icon" />
-                <strong>{value}</strong>
-                <span>{label}</span>
-              </div>
-            ))}
+            {stats.map(({ icon: Icon, value, label, to, state }) => {
+              const body = (
+                <>
+                  <Icon className="hero-stat-icon" />
+                  <strong>{value}</strong>
+                  <span>{label}</span>
+                </>
+              )
+              if (to?.startsWith('#')) {
+                return (
+                  <a key={label} href={to} className="hero-stat">
+                    {body}
+                  </a>
+                )
+              }
+              return (
+                <Link key={label} to={to} state={state} className="hero-stat">
+                  {body}
+                </Link>
+              )
+            })}
           </div>
         </div>
 
@@ -303,30 +290,6 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="public-section">
-        <div className="fellowship glass">
-          <h2 className="section-title gold-text">Fellowship Beyond Boundaries</h2>
-          <span className="gold-rule" />
-          <p className="muted">Celebrating the 'Family of Rotary' through the vibrant language of dance.</p>
-        </div>
-      </section>
-
-      <section className="public-section wide">
-        <div className="section-intro">
-          <span className="chip"><FiUsers /> Who it's for</span>
-          <h2 className="section-title">An Exclusive Gathering</h2>
-        </div>
-        <div className="info-grid two">
-          {GATHERING.map(({ icon: Icon, title, text }) => (
-            <div key={title} className="step glass">
-              <div className="step-icon"><Icon /></div>
-              <h3>{title}</h3>
-              <p className="muted">{text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       <section className="public-section wide" id="venue">
         <div className="section-intro">
           <span className="chip"><FiMapPin /> Venue</span>
@@ -345,142 +308,6 @@ export default function Home() {
             </p>
           </div>
           <img src={dodImages.museumTheatre} alt="Ethiraj College Auditorium" className="feature-img" />
-        </div>
-      </section>
-
-      <section className="public-section wide">
-        <div className="section-intro">
-          <span className="chip"><GiBallerinaShoes /> Classical Roots</span>
-          <h2 className="section-title">Classical Roots</h2>
-        </div>
-        <div className="feature-row reverse">
-          <div className="feature-text">
-            <h3>Bharatanatyam Showcase</h3>
-            <p className="muted">
-              Experience the divine grace of classical dance. Our program features masterfully choreographed segments that
-              tell stories of leadership, compassion, and heritage.
-            </p>
-            <p className="muted">
-              Performers from various clubs will showcase the rigorous training and artistic depth that mirrors the
-              discipline of Rotary service.
-            </p>
-          </div>
-          <img src={bharatanatyamPhoto} alt="Bharatanatyam stage performance" className="feature-img portrait" />
-        </div>
-      </section>
-
-      <section className="public-section wide">
-        <div className="section-intro">
-          <span className="chip"><FiStar /> What we stand for</span>
-          <h2 className="section-title">Core Event Pillars</h2>
-        </div>
-        <div className="info-grid three">
-          {PILLARS.map(({ icon: Icon, title, text }) => (
-            <div key={title} className="step glass pillar">
-              <div className="step-icon"><Icon /></div>
-              <h3>{title}</h3>
-              <p className="muted">{text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="public-section wide">
-        <div className="section-intro">
-          <span className="chip"><FiTrendingUp /> Expected Impact</span>
-          <h2 className="section-title">Expected Impact</h2>
-        </div>
-        <div className="impact glass">
-          <div className="impact-stat">
-            <strong>1200+</strong>
-            <span>Rotarians &amp; Families</span>
-          </div>
-          <div className="feature-text">
-            <h3>A Growing Legacy</h3>
-            <p className="muted">
-              With invitations extended to multiple districts, we anticipate a record-breaking turnout. This serves as a
-              testament to the vibrant energy of our newly chartered District 3233 and its collaborative spirit.
-            </p>
-            <p className="muted">Every ticket represents a family united by the ideal of service and the joy of fellowship.</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="public-section wide">
-        <div className="section-intro">
-          <span className="chip"><GiTheaterCurtains /> Programme</span>
-          <h2 className="section-title">Vibrant Traditions</h2>
-        </div>
-        <div className="info-grid two">
-          {TRADITIONS.map(({ title, src }) => (
-            <div key={title} className="tradition-card glass">
-              <img src={src} alt={title} loading="lazy" />
-              <span>{title}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="public-section wide">
-        <div className="section-intro">
-          <span className="chip"><FiTrendingUp /> Growth</span>
-          <h2 className="section-title">Engagement Growth</h2>
-        </div>
-        <div className="growth glass">
-          <div className="growth-plot">
-            <svg viewBox="0 0 1000 300" preserveAspectRatio="none" aria-hidden="true">
-              <polygon points={`0,300 ${GROWTH_LINE} 1000,300`} className="growth-area" />
-              <polyline points={GROWTH_LINE} className="growth-line" />
-            </svg>
-            {GROWTH.map((p) => (
-              <span key={p.x} className="growth-dot" style={{ left: `${p.x / 10}%`, top: `${p.y / 3}%` }} />
-            ))}
-          </div>
-          <div className="growth-labels muted small">
-            {GROWTH.filter((p) => p.label).map((p) => (
-              <span key={p.label}>{p.label}</span>
-            ))}
-          </div>
-        </div>
-        <p className="muted center-text">Expanding the horizons of Rotary Fellowship across Southern India.</p>
-      </section>
-
-      <section className="public-section">
-        <blockquote className="dod-quote glass">
-          <img src={dodImages.compass} alt="" className="quote-compass" />
-          <FaQuoteLeft className="quote-icon" />
-          <p>
-            "Fellowship is the foundation upon which Rotary service is built. When families dance together, districts
-            unite."
-          </p>
-          <cite>— The Spirit of Rotary Fellowship</cite>
-        </blockquote>
-      </section>
-
-      <section className="public-section" id="join">
-        <div className="join glass">
-          <h2 className="section-title gold-text">Join the Rhythm</h2>
-          <p className="muted">RSVP and registrations open for all Rotary Districts</p>
-          <div className="join-box">
-            <strong>{EVENT.organiser}</strong>
-            <span><FiMapPin /> Venue: {EVENT.venue}</span>
-            <span><FiCalendar /> Date: {EVENT.date} | <FiClock /> Time: {EVENT.time}</span>
-          </div>
-          <a href={REGISTER_FORM_URL} target="_blank" rel="noreferrer" className="btn btn-primary">
-            <FiUserPlus /> Register Now
-          </a>
-        </div>
-      </section>
-
-      <section className="public-section wide" id="gallery">
-        <div className="section-intro">
-          <span className="chip"><GiPartyPopper /> Gallery</span>
-          <h2 className="section-title">Dance of District</h2>
-        </div>
-        <div className="dod-gallery">
-          {GALLERY.map(({ src, alt }) => (
-            <img key={alt} src={src} alt={alt} loading="lazy" />
-          ))}
         </div>
       </section>
 
@@ -535,23 +362,6 @@ export default function Home() {
         )}
       </section>
 
-      <section className="public-section" id="how">
-        <div className="section-intro">
-          <span className="chip"><GiTheaterCurtains /> How it works</span>
-          <h2 className="section-title">From Audition To Champion</h2>
-        </div>
-        <div className="steps">
-          {STEPS.map(({ icon: Icon, title, text }, i) => (
-            <div key={title} className="step glass">
-              <span className="step-no">0{i + 1}</span>
-              <div className="step-icon"><Icon /></div>
-              <h3>{title}</h3>
-              <p className="muted small">{text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       <section className="public-section" id="results">
         {!settings.resultsPublished ? (
           <div className="coming-soon glass">
@@ -560,7 +370,7 @@ export default function Home() {
             <h2>Results coming soon</h2>
             <p className="muted">Our judges are scoring the performances. Check back after the results are published.</p>
             {!currentUser && (
-              <Link to="/login" className="btn btn-ghost">
+              <Link to="/login" state={{ audience: true }} className="btn btn-ghost">
                 <FiLogIn /> Login to follow along <FiArrowRight />
               </Link>
             )}

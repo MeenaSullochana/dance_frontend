@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { FiEdit2, FiPlus, FiTrash2 } from 'react-icons/fi'
 import { useApp } from '../../context/AppContext'
 import Modal from '../../components/Modal'
+import { agePayload, formatAgeRange, openAgeValue } from '../../utils/ageRange'
 
 const FORMAT_LABEL = { solo: 'Solo', couple: 'Couple', group: 'Group' }
 
@@ -45,7 +46,7 @@ export default function ManageClassifications() {
     showToast,
   } = useApp()
 
-  const [bandForm, setBandForm] = useState({ name: '', minAge: 5, maxAge: 12, formatKeys: ['solo'] })
+  const [bandForm, setBandForm] = useState({ name: '', minAge: '', maxAge: '', formatKeys: ['solo'] })
   const [typeForm, setTypeForm] = useState({ name: '', formatKeys: ['solo'] })
   const [fieldFor, setFieldFor] = useState(null)
   const [pickedIds, setPickedIds] = useState([])
@@ -63,13 +64,12 @@ export default function ManageClassifications() {
     event.preventDefault()
     const res = await createAgeBand({
       name: bandForm.name,
-      minAge: Number(bandForm.minAge),
-      maxAge: Number(bandForm.maxAge),
+      ...agePayload(bandForm.minAge, bandForm.maxAge),
       formatKeys: bandForm.formatKeys,
     })
     if (!res.ok) return showToast(res.error, 'error')
     showToast('Age category added')
-    setBandForm({ name: '', minAge: 5, maxAge: 12, formatKeys: ['solo'] })
+    setBandForm({ name: '', minAge: '', maxAge: '', formatKeys: ['solo'] })
   }
 
   const addType = async (event) => {
@@ -94,8 +94,7 @@ export default function ManageClassifications() {
     if (editing.kind === 'band') {
       res = await updateAgeBand(editing.id, {
         name,
-        minAge: Number(editing.minAge),
-        maxAge: Number(editing.maxAge),
+        ...agePayload(editing.minAge, editing.maxAge),
         formatKeys: editing.formatKeys,
       })
     } else if (editing.kind === 'type') {
@@ -203,12 +202,14 @@ export default function ManageClassifications() {
       <div className="two-col">
         <div className="panel glass">
           <h2>Age categories</h2>
-          <p className="muted small">Tick Solo, Couple, or Group. The oldest age in a couple or group picks the matching category.</p>
+          <p className="muted small">
+            Tick Solo, Couple, or Group. Leave From blank for under an age (example under 9). Leave To blank for open-ended (example 20+).
+          </p>
           <form className="form" onSubmit={addBand}>
             <div className="inline-form">
               <input placeholder="Name" value={bandForm.name} onChange={(event) => setBandForm({ ...bandForm, name: event.target.value })} required />
-              <input type="number" min="1" max="120" value={bandForm.minAge} onChange={(event) => setBandForm({ ...bandForm, minAge: event.target.value })} required />
-              <input type="number" min="1" max="120" value={bandForm.maxAge} onChange={(event) => setBandForm({ ...bandForm, maxAge: event.target.value })} required />
+              <input type="number" min="1" max="120" placeholder="From" value={bandForm.minAge} onChange={(event) => setBandForm({ ...bandForm, minAge: event.target.value })} />
+              <input type="number" min="1" max="120" placeholder="To" value={bandForm.maxAge} onChange={(event) => setBandForm({ ...bandForm, maxAge: event.target.value })} />
               <button className="btn btn-primary small"><FiPlus /> Add</button>
             </div>
             <FormatChecks formats={formats} value={bandForm.formatKeys} onChange={(formatKeys) => setBandForm({ ...bandForm, formatKeys })} />
@@ -221,7 +222,7 @@ export default function ManageClassifications() {
               {ageBands.map((band) => (
                 <tr key={band.id}>
                   <td><strong>{band.name}</strong></td>
-                  <td>{band.minAge}-{band.maxAge}</td>
+                  <td>{formatAgeRange(band)}</td>
                   <td>
                     <FormatChecks
                       formats={formats}
@@ -236,8 +237,8 @@ export default function ManageClassifications() {
                         kind: 'band',
                         id: band.id,
                         name: band.name,
-                        minAge: band.minAge,
-                        maxAge: band.maxAge,
+                        minAge: openAgeValue(band.minAge),
+                        maxAge: openAgeValue(band.maxAge),
                         formatKeys: band.formatKeys || [],
                       })}
                     >
@@ -334,16 +335,19 @@ export default function ManageClassifications() {
               <input value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} required />
             </label>
             {editing.kind === 'band' && (
-              <div className="inline-form">
-                <label>
-                  From age
-                  <input type="number" min="1" max="120" value={editing.minAge} onChange={(event) => setEditing({ ...editing, minAge: event.target.value })} required />
-                </label>
-                <label>
-                  To age
-                  <input type="number" min="1" max="120" value={editing.maxAge} onChange={(event) => setEditing({ ...editing, maxAge: event.target.value })} required />
-                </label>
-              </div>
+              <>
+                <div className="inline-form">
+                  <label>
+                    From age
+                    <input type="number" min="1" max="120" placeholder="Blank = under to-age" value={editing.minAge} onChange={(event) => setEditing({ ...editing, minAge: event.target.value })} />
+                  </label>
+                  <label>
+                    To age
+                    <input type="number" min="1" max="120" placeholder="Blank = from-age+" value={editing.maxAge} onChange={(event) => setEditing({ ...editing, maxAge: event.target.value })} />
+                  </label>
+                </div>
+                <p className="muted small">Example: From blank and To 8 = under 9. From 20 and To blank = 20+.</p>
+              </>
             )}
             {editing.kind === 'category' && (
               <label>

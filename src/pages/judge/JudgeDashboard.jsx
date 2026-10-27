@@ -1,16 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
-import { FiCheck, FiEdit3, FiUser, FiUsers } from 'react-icons/fi'
+import { useSearchParams } from 'react-router-dom'
+import { FiCheck, FiEdit3, FiSearch, FiUser, FiUsers } from 'react-icons/fi'
 import { FaUserFriends } from 'react-icons/fa'
 import { useApp } from '../../context/AppContext'
-import PlayerCard from '../../components/PlayerCard'
 import StagePopup from '../../components/StagePopup'
+import { playerPhoto } from '../../utils/playerPhoto'
+import { readParticipantType } from '../../utils/participantType'
 
 export default function JudgeDashboard() {
   const { players, playerStats, scores, currentUser, participantTypes, settings } = useApp()
-  const [tab, setTab] = useState('single')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [tab, setTab] = useState(() => readParticipantType(searchParams.get('type')))
   const [filter, setFilter] = useState('all')
+  const [search, setSearch] = useState('')
   const [stageId, setStageId] = useState(null)
   const seenLive = useRef(null)
+
+  useEffect(() => {
+    setTab(readParticipantType(searchParams.get('type')))
+  }, [searchParams])
 
   useEffect(() => {
     const liveId = settings.livePlayerId
@@ -24,13 +32,20 @@ export default function JudgeDashboard() {
     }
   }, [settings.livePlayerId])
 
+  const changeTab = (key) => {
+    setTab(key)
+    setSearchParams(key === 'single' ? {} : { type: key })
+  }
+
   const myScore = (playerId) => scores.find((s) => s.playerId === playerId && s.judgeId === currentUser.id)
   const ofType = players.filter((p) => p.type === tab)
   const doneCount = ofType.filter((p) => myScore(p.id)).length
+  const query = search.trim().toLowerCase()
   const list = ofType.filter((p) => {
-    if (filter === 'todo') return !myScore(p.id)
-    if (filter === 'done') return !!myScore(p.id)
-    return true
+    if (filter === 'todo' && myScore(p.id)) return false
+    if (filter === 'done' && !myScore(p.id)) return false
+    if (!query) return true
+    return [p.name, p.phone, p.email, p.category].some((value) => String(value || '').toLowerCase().includes(query))
   })
   const stagePlayer = players.find((player) => player.id === stageId)
   const tabLabel = tab === 'group' ? 'groups' : tab === 'couple' ? 'couples' : 'solo players'
@@ -51,16 +66,20 @@ export default function JudgeDashboard() {
 
       <div className="toolbar">
         <div className="tabs">
-          <button className={`tab ${tab === 'single' ? 'active' : ''}`} onClick={() => setTab('single')}>
-            <FiUser /> Solo
+          <button className={`tab ${tab === 'single' ? 'active' : ''}`} onClick={() => changeTab('single')}>
+            <FiUser /> Solo ({players.filter((p) => p.type === 'single').length})
           </button>
-          <button className={`tab ${tab === 'couple' ? 'active' : ''}`} onClick={() => setTab('couple')}>
-            <FaUserFriends /> Couple
+          <button className={`tab ${tab === 'couple' ? 'active' : ''}`} onClick={() => changeTab('couple')}>
+            <FaUserFriends /> Couple ({players.filter((p) => p.type === 'couple').length})
           </button>
-          <button className={`tab ${tab === 'group' ? 'active' : ''}`} onClick={() => setTab('group')}>
-            <FiUsers /> Group
+          <button className={`tab ${tab === 'group' ? 'active' : ''}`} onClick={() => changeTab('group')}>
+            <FiUsers /> Group ({players.filter((p) => p.type === 'group').length})
           </button>
         </div>
+        <label className="input-icon search">
+          <FiSearch />
+          <input placeholder="Name, mobile, or email" value={search} onChange={(event) => setSearch(event.target.value)} />
+        </label>
         <div className="tabs">
           {[
             ['all', 'All'],
@@ -75,33 +94,49 @@ export default function JudgeDashboard() {
       </div>
 
       {list.length ? (
-        <div className="card-grid">
-          {list.map((p) => {
-            const mine = myScore(p.id)
-            return (
-              <PlayerCard key={p.id} player={p} stats={playerStats[p.id]} showScore={false} participantTypes={participantTypes} live={settings.livePlayerId === p.id}>
-                {settings.livePlayerId !== p.id ? (
-                  <span className="muted small">Marks open only while live</span>
-                ) : mine ? (
-                  <>
-                    <span className="my-score">
-                      <FiCheck /> Your marks: <strong>{mine.total}</strong>/{playerStats[p.id].maxTotal}
-                    </span>
-                    <button className="btn btn-ghost small" onClick={() => setStageId(p.id)}>
-                      <FiEdit3 /> Edit
-                    </button>
-                  </>
-                ) : (
-                  <button className="btn btn-primary small full" onClick={() => setStageId(p.id)}>
-                    <FiEdit3 /> Give Marks
-                  </button>
-                )}
-              </PlayerCard>
-            )
-          })}
+        <div className="panel glass desk-list">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Participant</th>
+                <th>Category</th>
+                <th>Contact</th>
+                <th>Your marks</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((player) => {
+                const mine = myScore(player.id)
+                const typeName = participantTypes.find((item) => item.id === player.participantTypeId)?.name
+                const live = settings.livePlayerId === player.id
+                return (
+                  <tr key={player.id} className={live ? 'is-live-row' : ''}>
+                    <td>
+                      <div className="who">
+                        <img src={playerPhoto(player)} alt="" />
+                        <span>
+                          <strong>{player.name}</strong>
+                          <span className="muted small">#{player.chestNo}{typeName ? ` · ${typeName}` : ''}{player.age != null ? ` · Age ${player.age}` : ''}</span>
+                        </span>
+                      </div>
+                    </td>
+                    <td>{player.category}</td>
+                    <td className="muted small">{[player.phone, player.email].filter(Boolean).join(' · ') || '—'}</td>
+                    <td>{mine ? <span className="desk-pill received"><FiCheck /> {mine.total}/{playerStats[player.id].maxTotal}</span> : '—'}</td>
+                    <td className="actions">
+                      <button className={`btn ${live ? 'btn-primary' : 'btn-ghost'} small`} onClick={() => setStageId(player.id)}>
+                        <FiEdit3 /> {live ? (mine ? 'Edit' : 'Give marks') : 'Vote'}
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       ) : (
-        <div className="empty glass">Nothing here. 🎉</div>
+        <div className="empty glass">Nothing here.</div>
       )}
       {stagePlayer && <StagePopup key={stagePlayer.id} player={stagePlayer} mode="judge" onClose={() => setStageId(null)} />}
     </div>

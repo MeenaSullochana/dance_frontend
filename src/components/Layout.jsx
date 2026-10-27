@@ -9,7 +9,6 @@ import {
   FiUserCheck,
   FiUsers,
   FiGlobe,
-  FiEdit3,
   FiLayers,
   FiUpload,
   FiSliders,
@@ -21,31 +20,32 @@ import { dodLogo, judgeAvatar, rcmnEmblem, rotaryDistrictLogo } from '../assets/
 const LINKS = {
   admin: [
     { to: '/admin', label: 'Dashboard', icon: FiGrid, end: true },
-    { to: '/admin/players', label: 'Players', icon: FiUsers },
+    { to: '/admin/players', label: 'Participants', icon: FiUsers },
     { to: '/admin/import', label: 'Import', icon: FiUpload },
     { to: '/admin/classifications', label: 'Classifications', icon: FiLayers },
     { to: '/admin/marks', label: 'Mark Categories', icon: FiSliders },
     { to: '/admin/judges', label: 'Judges', icon: FiUserCheck },
-    { to: '/admin/users', label: 'Users', icon: FiUser },
+    { to: '/admin/users', label: 'Audience', icon: FiUser },
     { to: '/admin/results', label: 'Results', icon: FiAward },
   ],
-  judge: [{ to: '/judge', label: 'Give Marks', icon: FiEdit3, end: true }],
-  user: [{ to: '/user', label: 'Players & Results', icon: FiAward, end: true }],
+  judge: [{ to: '/judge', label: 'Participants', icon: FiUsers, end: true }],
+  user: [{ to: '/user', label: 'Participants', icon: FiUsers, end: true }],
 }
 
-const PANEL_NAMES = { admin: 'Admin Panel', judge: 'Judge Panel', user: 'User Panel' }
+const PANEL_NAMES = { admin: 'Admin Panel', judge: 'Judge Panel', user: 'Audience Panel' }
+const ROLE_LABELS = { admin: 'Admin', judge: 'Judge', user: 'Audience' }
 
 const TITLES = {
   '/admin': 'Dashboard',
-  '/admin/players': 'Manage Players',
+  '/admin/players': 'Manage Participants',
   '/admin/import': 'Import Google Form',
   '/admin/classifications': 'Classifications',
   '/admin/marks': 'Mark Categories',
   '/admin/judges': 'Manage Judges',
-  '/admin/users': 'Manage Users',
+  '/admin/users': 'Manage Audience',
   '/admin/results': 'Results & Publishing',
-  '/judge': 'Judge Panel',
-  '/user': 'Players & Results',
+  '/judge': 'Participants',
+  '/user': 'Participants',
 }
 
 export default function Layout() {
@@ -65,7 +65,7 @@ export default function Layout() {
 
   const handleLogout = async () => {
     await logout()
-    navigate('/login')
+    navigate('/login', { state: { audience: true } })
   }
 
   return (
@@ -113,7 +113,7 @@ export default function Layout() {
           <div className="topbar-user">
             <div className="text-right">
               <strong>{currentUser.name}</strong>
-              <span className="muted small">{currentUser.role}</span>
+              <span className="muted small">{ROLE_LABELS[currentUser.role] || currentUser.role}</span>
             </div>
             <img src={judgeAvatar} alt="" className="avatar" />
           </div>

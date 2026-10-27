@@ -7,6 +7,9 @@ import Modal from './Modal'
 import StatusBadge from './StatusBadge'
 import MarkRounds from './MarkRounds'
 
+const VOTING_CLOSED = 'Voting lines will open only during/ after the performance'
+const AUDIENCE_ONCE = "Once you submit, you can't redo the voting"
+
 export default function StagePopup({ player, mode, onClose }) {
   const {
     scores,
@@ -23,7 +26,9 @@ export default function StagePopup({ player, mode, onClose }) {
 
   const criteria = criteriaFor(player.classificationId)
   const maxTotal = criteria.reduce((sum, item) => sum + Number(item.maxMarks || 0), 0) || 1
+  const publicMax = Number(settings.publicMaxMarks) || 10
   const existing = scores.find((score) => score.playerId === player.id && score.judgeId === currentUser?.id)
+  const live = settings.livePlayerId === player.id
   const [marks, setMarks] = useState(() =>
     Object.fromEntries(
       criteria.map((item) => {
@@ -32,6 +37,10 @@ export default function StagePopup({ player, mode, onClose }) {
       }),
     ),
   )
+  const [overall, setOverall] = useState(() => {
+    const saved = existing?.criteria?.overall
+    return Number.isInteger(saved) ? Math.min(Math.max(saved, 1), publicMax) : 1
+  })
   const [comment, setComment] = useState(existing?.comment || '')
   const [saving, setSaving] = useState(false)
 
@@ -45,10 +54,10 @@ export default function StagePopup({ player, mode, onClose }) {
   const saveMarks = async (event) => {
     event.preventDefault()
     setSaving(true)
-    const res = await submitScore(player.id, marks, comment.trim())
+    const res = await submitScore(player.id, mode === 'user' ? { overall } : marks, comment.trim())
     setSaving(false)
     if (!res.ok) return showToast(res.error, 'error')
-    showToast(existing ? 'Marks updated' : 'Marks submitted')
+    showToast(mode === 'user' ? 'Vote submitted' : existing ? 'Marks updated' : 'Marks submitted')
     onClose()
   }
 
@@ -59,12 +68,19 @@ export default function StagePopup({ player, mode, onClose }) {
     onClose()
   }
 
+  const closedNote = (
+    <div className="stage-note">
+      <h3>Voting closed</h3>
+      <p className="muted">{VOTING_CLOSED}</p>
+    </div>
+  )
+
   return (
-    <Modal title={mode === 'judge' ? 'Give marks' : 'On stage'} onClose={onClose} wide>
+    <Modal title={mode === 'judge' ? 'Give marks' : mode === 'user' ? 'Vote' : 'On stage'} onClose={onClose} wide>
       <div className="stage-layout">
         <div className="stage-player">
           <img src={playerPhoto(player)} alt={player.name} />
-          {settings.livePlayerId === player.id && (
+          {live && (
             <span className="live-pill inline"><FiRadio /> Live</span>
           )}
           <h2>{player.name}</h2>
@@ -82,18 +98,15 @@ export default function StagePopup({ player, mode, onClose }) {
             </div>
           )}
           {stats && <StatusBadge status={showScore ? stats.status : 'pending'} />}
-          {mode === 'admin' && settings.livePlayerId === player.id && (
+          {mode === 'admin' && live && (
             <button type="button" className="btn btn-danger small" onClick={stopLive}>
               Stop live
             </button>
           )}
         </div>
 
-        {mode === 'judge' && settings.livePlayerId !== player.id ? (
-          <div className="stage-note">
-            <h3>Marks are closed</h3>
-            <p className="muted">A judge can mark {player.name} only while the admin has this participant live.</p>
-          </div>
+        {mode === 'judge' && !live ? (
+          closedNote
         ) : mode === 'judge' ? (
           <form className="score-form" onSubmit={saveMarks}>
             <p className="muted small">Categories and maximum marks are set by admin.</p>
@@ -108,7 +121,7 @@ export default function StagePopup({ player, mode, onClose }) {
             ))}
             <div className="total-box">
               <span>Total</span>
-              <strong className="gradient-text">{total} / {maxTotal}</strong>
+              <strong className="gradient-text">{total}({maxTotal})</strong>
               <span className="muted small">{percent.toFixed(0)}%</span>
             </div>
             <label>
@@ -119,32 +132,33 @@ export default function StagePopup({ player, mode, onClose }) {
               <FiSave /> {existing ? 'Update marks' : 'Submit marks'}
             </button>
           </form>
-        ) : mode === 'user' && settings.livePlayerId === player.id ? (
+        ) : mode === 'user' && !live ? (
+          closedNote
+        ) : mode === 'user' && existing ? (
+          <div className="stage-note">
+            <h3>Vote recorded</h3>
+            <p className="muted">Your mark: <strong>{existing.criteria?.overall ?? existing.total}({publicMax})</strong></p>
+            <p className="muted small">{AUDIENCE_ONCE}</p>
+          </div>
+        ) : mode === 'user' ? (
           <form className="score-form" onSubmit={saveMarks}>
-            <p className="muted small">Tap a round for each mark. Your score is averaged with the other users.</p>
-            {criteria.map((item) => (
-              <MarkRounds
-                key={item.key}
-                label={item.label}
-                max={item.maxMarks}
-                value={marks[item.key] || 1}
-                onChange={(value) => setMarks({ ...marks, [item.key]: value })}
-              />
-            ))}
+            <p className="muted small">Give one overall mark. The maximum is set by the admin.</p>
+            <MarkRounds label="Overall" max={publicMax} value={overall} onChange={setOverall} />
             <div className="total-box">
-              <span>Your total</span>
-              <strong className="gradient-text">{total} / {maxTotal}</strong>
+              <span>Your mark</span>
+              <strong className="gradient-text">{overall}({publicMax})</strong>
             </div>
+            <p className="muted small vote-once-note">{AUDIENCE_ONCE}</p>
             <button className="btn btn-primary full" disabled={saving}>
-              <FiSave /> {existing ? 'Update marks' : 'Submit marks'}
+              <FiSave /> Submit mark
             </button>
           </form>
         ) : (
           <div className="stage-note">
-            <h3>{player.name} is {settings.livePlayerId === player.id ? 'performing now' : 'selected'}</h3>
+            <h3>{player.name} is {live ? 'performing now' : 'selected'}</h3>
             <p className="muted">
               {mode === 'admin'
-                ? 'Judges and users can mark this performer while they are live. Winners are chosen from the judge average.'
+                ? 'Judges and audience can mark this performer while they are live. Winners are chosen from the judge average.'
                 : settings.resultsPublished
                   ? 'Results are published. The winner comes from the judge average.'
                   : 'Marks stay hidden until the admin publishes results.'}
@@ -158,7 +172,7 @@ export default function StagePopup({ player, mode, onClose }) {
             {showScore && stats?.publicCount > 0 && (
               <p>
                 Public average <strong>{stats.publicAvg.toFixed(1)}</strong>
-                <span className="muted"> from {stats.publicCount} users</span>
+                <span className="muted"> / {publicMax} from {stats.publicCount} audience</span>
               </p>
             )}
           </div>

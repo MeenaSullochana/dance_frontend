@@ -48,7 +48,7 @@ export const TERMS = {
     {
       heading: 'Website Accounts',
       points: [
-        'Admin and judge accounts are created by the organising committee. A visitor can sign up as a user with an email or mobile number and a password.',
+        'Admin and judge accounts are created by the organising committee. A visitor can sign up as audience with an email or mobile number and a password.',
         'Keep your login details private. You are responsible for activity carried out under your account.',
         'Accounts may be suspended or removed if they are misused or if the information provided is found to be false.',
       ],
@@ -97,7 +97,7 @@ export const PRIVACY = {
       points: [
         'Registration details: participant or group name, member names, Rotary club and district, dance style, age category, phone number and email address, submitted through our registration form.',
         'Contact enquiries: the name, email, phone number and message you send through the contact form on this website.',
-        'Account details: name, login ID and role for admin, judge and user accounts.',
+        'Account details: name, login ID and role for admin, judge and audience accounts.',
         'Event data: performer photos, scores, rankings and results recorded during the competition.',
       ],
     },

@@ -24,7 +24,9 @@ async function request(path, { method = 'GET', body, auth = true } = {}) {
       body: body === undefined ? undefined : JSON.stringify(body),
     })
   } catch {
-    const error = new Error('Cannot reach the server. Start the backend and check VITE_BACKEND_URL / VITE_API_URL in .env.')
+    const error = new Error(
+      'Cannot reach the server. From the project root run npm run dev (starts API + website), or start backend with npm run dev in the backend folder.',
+    )
     error.status = 0
     throw error
   }

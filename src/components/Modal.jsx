@@ -6,7 +6,8 @@ export default function Modal({ title, onClose, children, wide = false }) {
       <div className={`modal glass ${wide ? 'wide' : ''}`} onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h2>{title}</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+            <span className="modal-close-ring" aria-hidden="true" />
             <FiX />
           </button>
         </div>

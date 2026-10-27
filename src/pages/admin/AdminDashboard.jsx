@@ -9,8 +9,8 @@ export default function AdminDashboard() {
   const { players, judges, pendingMembers, scores, playerStats, settings, maxTotal } = useApp()
 
   const stats = [
-    { label: 'Single Players', value: players.filter((p) => p.type === 'single').length, icon: FiUser, color: 'pink', to: '/admin/players' },
-    { label: 'Groups', value: players.filter((p) => p.type === 'group').length, icon: FiUsers, color: 'purple', to: '/admin/players' },
+    { label: 'Solo', value: players.filter((p) => p.type === 'single').length, icon: FiUser, color: 'pink', to: '/admin/players?type=single' },
+    { label: 'Groups', value: players.filter((p) => p.type === 'group').length, icon: FiUsers, color: 'purple', to: '/admin/players?type=group' },
     { label: 'Judges', value: judges.length, icon: FiUserCheck, color: 'orange', to: '/admin/judges' },
     {
       label: 'Fully Judged',
@@ -57,7 +57,7 @@ export default function AdminDashboard() {
       {pendingMembers.length > 0 && (
         <div className="banner glass">
           <span>
-            <strong>{pendingMembers.length}</strong> user registration{pendingMembers.length > 1 ? 's' : ''} waiting for approval.
+            <strong>{pendingMembers.length}</strong> audience registration{pendingMembers.length > 1 ? 's' : ''} waiting for approval.
           </span>
           <Link to="/admin/users" className="btn btn-ghost">Review</Link>
         </div>
@@ -73,8 +73,8 @@ export default function AdminDashboard() {
       <div className="admin-shortcuts">
         <Link to="/admin/players" className="glass admin-shortcut">
           <FiUsers />
-          <strong>Players & groups</strong>
-          <span className="muted small">Add solo dancers, teams, photos and categories.</span>
+          <strong>Participants</strong>
+          <span className="muted small">Add solo dancers, couples, groups, photos and categories.</span>
         </Link>
         <Link to="/admin/judges" className="glass admin-shortcut">
           <FiUserCheck />
@@ -83,8 +83,8 @@ export default function AdminDashboard() {
         </Link>
         <Link to="/admin/users" className="glass admin-shortcut">
           <FiUser />
-          <strong>Users</strong>
-          <span className="muted small">Add a user, or they can sign up with an email or mobile number.</span>
+          <strong>Audience</strong>
+          <span className="muted small">Add an audience account, or they can sign up with an email or mobile number.</span>
         </Link>
         <Link to="/admin/results" className="glass admin-shortcut">
           <FiAward />

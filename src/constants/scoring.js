@@ -47,7 +47,7 @@ export const LEGACY_CATEGORY_NAMES = {
 export const ROLES = [
   { value: 'admin', label: 'Admin', home: '/admin' },
   { value: 'judge', label: 'Judge', home: '/judge' },
-  { value: 'user', label: 'User', home: '/user' },
+  { value: 'user', label: 'Audience', home: '/user' },
 ]
 
 export const REGISTER_ROLES = ['user']

@@ -4,8 +4,9 @@ import { useApp } from '../../context/AppContext'
 import Modal from '../../components/Modal'
 
 export default function ManageMarks() {
-  const { criteria, maxTotal, createMarkCriterion, updateMarkCriterion, deleteMarkCriterion, showToast } = useApp()
+  const { criteria, maxTotal, settings, createMarkCriterion, updateMarkCriterion, deleteMarkCriterion, setPublicMaxMarks, showToast } = useApp()
   const [editing, setEditing] = useState(null)
+  const [publicMax, setPublicMax] = useState(settings.publicMaxMarks || 10)
 
   const save = async (event) => {
     event.preventDefault()
@@ -29,8 +30,32 @@ export default function ManageMarks() {
     showToast('Category removed')
   }
 
+  const savePublicMax = async (event) => {
+    event.preventDefault()
+    const res = await setPublicMaxMarks(Number(publicMax))
+    if (!res.ok) return showToast(res.error, 'error')
+    showToast('Audience overall mark updated')
+  }
+
   return (
     <div className="stack">
+      <form className="panel glass inline-form" onSubmit={savePublicMax}>
+        <div>
+          <strong>Audience overall mark</strong>
+          <p className="muted small">Audience members give one mark, not the judge categories. The public average is those marks added together and divided by how many audience members marked.</p>
+        </div>
+        <input
+          type="number"
+          min="1"
+          max="100"
+          value={publicMax}
+          onChange={(event) => setPublicMax(event.target.value)}
+          aria-label="Maximum overall mark"
+          required
+        />
+        <button className="btn btn-primary">Save maximum</button>
+      </form>
+
       <div className="toolbar">
         <p className="muted">
           Judges score these categories. Current maximum total is <strong>{maxTotal}</strong>.

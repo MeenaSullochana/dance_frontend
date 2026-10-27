@@ -15,17 +15,17 @@ export default function ManageUsers() {
     e.preventDefault()
     const res = await addAccount({ ...form, role: 'user' })
     if (!res.ok) return setError(res.error)
-    showToast('User added')
+    showToast('Audience added')
     setForm({ name: '', email: '', password: '' })
     setError('')
     setShowForm(false)
   }
 
   const handleDelete = async (u) => {
-    if (!window.confirm(`Delete user "${u.name}"?`)) return
+    if (!window.confirm(`Delete audience "${u.name}"?`)) return
     const res = await deleteAccount(u.id)
     if (!res.ok) return showToast(res.error, 'error')
-    showToast('User deleted', 'error')
+    showToast('Audience deleted', 'error')
   }
 
   return (
@@ -33,54 +33,55 @@ export default function ManageUsers() {
       <PendingRegistrations accounts={pendingMembers} />
 
       <div className="toolbar">
-        <p className="muted grow">Add a user here, or they can sign up with an email or mobile number. The same password lets them in.</p>
+        <p className="muted grow">Add an audience account here, or they can sign up with an email or mobile number. The same password lets them in.</p>
         <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-          <FiPlus /> Add User
+          <FiPlus /> Add Audience
         </button>
       </div>
 
-      <div className="panel glass">
+      <div className="panel glass desk-list">
         <table className="table">
           <thead>
-            <tr><th>User</th><th>Email or mobile</th><th>Status</th><th></th></tr>
+            <tr><th>Audience</th><th>Email or mobile</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
             {members.map((u) => (
               <tr key={u.id}>
                 <td>
-                  <div className="row">
-                    <img src={judgeAvatar} alt="" className="avatar" />
-                    <strong>{u.name}</strong>
+                  <div className="who">
+                    <img src={judgeAvatar} alt="" />
+                    <span>
+                      <strong>{u.name}</strong>
+                      <span className="muted small">Audience</span>
+                    </span>
                   </div>
                 </td>
-                <td className="muted">{u.email || u.phone || '—'}</td>
+                <td className="muted small">{u.email || u.phone || '—'}</td>
                 <td>
-                  <span className={`badge ${u.active ? 'badge-qualified' : 'badge-rejected'}`}>
-                    {u.active ? 'Active' : 'Inactive'}
-                  </span>
+                  <span className={`desk-pill ${u.active ? 'received' : 'alert'}`}>{u.active ? 'Active' : 'Inactive'}</span>
                 </td>
                 <td className="actions">
-                  <button className="icon-btn" title={u.active ? 'Deactivate' : 'Activate'} onClick={async () => {
+                  <button className="btn btn-ghost small" onClick={async () => {
                     const res = await toggleAccount(u.id)
                     if (!res.ok) showToast(res.error, 'error')
                   }}>
-                    {u.active ? <FiToggleRight /> : <FiToggleLeft />}
+                    {u.active ? <FiToggleRight /> : <FiToggleLeft />} {u.active ? 'Active' : 'Off'}
                   </button>
-                  <button className="icon-btn danger" title="Delete" onClick={() => handleDelete(u)}>
+                  <button className="btn btn-danger small" onClick={() => handleDelete(u)}>
                     <FiTrash2 />
                   </button>
                 </td>
               </tr>
             ))}
             {!members.length && (
-              <tr><td colSpan="4" className="muted center">No users yet</td></tr>
+              <tr><td colSpan="4" className="muted center">No audience yet</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
       {showForm && (
-        <Modal title="Add User" onClose={() => setShowForm(false)}>
+        <Modal title="Add Audience" onClose={() => setShowForm(false)}>
           <form className="form" onSubmit={handleSubmit}>
             <label>
               Name
@@ -97,7 +98,7 @@ export default function ManageUsers() {
             {error && <div className="error">{error}</div>}
             <div className="form-actions">
               <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>
-              <button className="btn btn-primary">Add User</button>
+              <button className="btn btn-primary">Add Audience</button>
             </div>
           </form>
         </Modal>

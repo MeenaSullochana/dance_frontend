@@ -154,7 +154,11 @@ export function AppProvider({ children }) {
     busy.current += 1
     generation.current += 1
     try {
-      const payload = await api.login({ email, password, role })
+      const body =
+        role === 'user'
+          ? { phone: email, audience: true, role: 'user' }
+          : { email, password }
+      const payload = await api.login(body)
       api.setToken(payload.token)
       apply(payload)
       return { ok: true, user: payload.user }
@@ -252,6 +256,7 @@ export function AppProvider({ children }) {
     toggleWinner: (id) => run(() => api.toggleWinner(id)),
     findWinners: () => run(() => api.findWinners()),
     setResultsPublished: (resultsPublished) => run(() => api.updateSettings({ resultsPublished })),
+    setPublicMaxMarks: (publicMaxMarks) => run(() => api.updateSettings({ publicMaxMarks })),
     setLivePlayer: (id, live) => run(() => api.setPlayerLive(id, { live })),
     setPlayerArrived: (id, arrived) => run(() => api.setPlayerArrived(id, { arrived })),
     createMarkCriterion: (body) => run(() => api.createMarkCriterion(body)),
@@ -321,7 +326,7 @@ export function AppProvider({ children }) {
         <div className="boot-card glass">
           <strong>Server is not running</strong>
           <p className="muted">
-            The site is looking for the API at <b>{SITE.backendUrl}</b>. Start the backend, or update <b>VITE_BACKEND_URL</b> in the frontend <b>.env</b> file.
+            The API at <b>{SITE.backendUrl}</b> is offline. In the project root run <b>npm run dev</b> so both the API and website start together. Then click Try again.
           </p>
           <button className="btn btn-primary" onClick={retry}>Try again</button>
         </div>

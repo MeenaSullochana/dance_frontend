@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { FiCamera, FiEdit2, FiEye, FiPlus, FiRadio, FiSearch, FiTrash2, FiUser, FiUsers, FiX, FiUpload } from 'react-icons/fi'
 import { FaUserFriends } from 'react-icons/fa'
 import { useApp } from '../../context/AppContext'
@@ -9,6 +9,8 @@ import { CATEGORIES } from '../../constants/scoring'
 import { DANCE_STYLES, STYLE_GROUPS } from '../../constants/danceStyles'
 import { asPeople, memberLabel } from '../../utils/member'
 import { playerPhoto } from '../../utils/playerPhoto'
+import { readParticipantType } from '../../utils/participantType'
+import { bandCoversAge, bandSpan, ageFloor } from '../../utils/ageRange'
 
 const FEE_OPTIONS = [
   { value: 'received', label: 'Received' },
@@ -18,6 +20,10 @@ const FEE_OPTIONS = [
 
 function knownFee(value) {
   return FEE_OPTIONS.some((option) => option.value === value) ? value : ''
+}
+
+function needsAttention(value) {
+  return value === 'not_received' || value === 'doubt'
 }
 
 const CategoryOptions = () =>
@@ -50,6 +56,7 @@ const emptyForm = (type) => ({
   phone: '',
   club: '',
   feeStatus: '',
+  pendriveStatus: '',
 })
 
 const PHOTO_MAX_SIZE = 400
@@ -74,7 +81,7 @@ function shrinkPhoto(file) {
 
 function narrowestBand(bands) {
   return [...bands].sort(
-    (a, b) => (Number(a.maxAge) - Number(a.minAge)) - (Number(b.maxAge) - Number(b.minAge)) || Number(a.minAge) - Number(b.minAge),
+    (a, b) => bandSpan(a) - bandSpan(b) || ageFloor(a) - ageFloor(b),
   )[0]
 }
 
@@ -88,7 +95,7 @@ function placedCategory(form, { classifications, ageBands, formats }) {
   const options = classifications.filter((item) => item.kind === 'category' && item.formatId === formatId)
   if (oldest != null) {
     const covering = ageBands.filter(
-      (item) => item.active !== false && oldest >= Number(item.minAge) && oldest <= Number(item.maxAge),
+      (item) => item.active !== false && bandCoversAge(item, oldest),
     )
     const scoped = covering.filter((item) => (item.formatKeys || []).includes(formatKey))
     const band = narrowestBand(scoped.length ? scoped : formatKey === 'group' ? covering : [])
@@ -274,14 +281,27 @@ function PlayerForm({ initial, spot, onSave, onCancel, participantTypes, classif
       <label>
         Fee
         {spot && <span className="muted small">Spot registration — record whether the fee was received.</span>}
-        <select value={knownFee(form.feeStatus)} onChange={(e) => set('feeStatus', e.target.value)} required>
+        <select className={needsAttention(form.feeStatus) ? 'alert' : ''} value={knownFee(form.feeStatus)} onChange={(e) => set('feeStatus', e.target.value)} required>
           <option value="" disabled>Choose fee</option>
           {FEE_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
         </select>
-        {(form.feeStatus === 'not_received' || form.feeStatus === 'doubt') && (
+        {needsAttention(form.feeStatus) && (
           <span className="fee-alert">{form.feeStatus === 'doubt' ? 'Doubt is flagged until it is checked.' : 'Not received is flagged until the fee is collected.'}</span>
+        )}
+      </label>
+      <label>
+        Audio track(Pendrive)
+        <span className="muted small">Track whether the audio track (pendrive) was received.</span>
+        <select className={needsAttention(form.pendriveStatus) ? 'alert' : ''} value={knownFee(form.pendriveStatus)} onChange={(e) => set('pendriveStatus', e.target.value)} required>
+          <option value="" disabled>Choose audio track</option>
+          {FEE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        {needsAttention(form.pendriveStatus) && (
+          <span className="fee-alert">{form.pendriveStatus === 'doubt' ? 'Audio track doubt is flagged until it is checked.' : 'Audio track not received is flagged until it is collected.'}</span>
         )}
       </label>
 
@@ -325,13 +345,23 @@ export default function ManagePlayers() {
     setPlayerArrived,
     showToast,
   } = useApp()
-  const [tab, setTab] = useState('single')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [tab, setTab] = useState(() => readParticipantType(searchParams.get('type')))
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All')
   const [editing, setEditing] = useState(null)
   const [profile, setProfile] = useState(null)
   const [idNotice, setIdNotice] = useState(null)
   const [stageId, setStageId] = useState(null)
+
+  useEffect(() => {
+    setTab(readParticipantType(searchParams.get('type')))
+  }, [searchParams])
+
+  const changeTab = (key) => {
+    setTab(key)
+    setSearchParams(key === 'single' ? {} : { type: key })
+  }
 
   const query = search.trim().toLowerCase()
   const list = players.filter((player) => {
@@ -343,6 +373,7 @@ export default function ManagePlayers() {
 
   const handleSave = async (form) => {
     if (!knownFee(form.feeStatus)) return showToast('Choose the fee: received, not received, or doubt', 'error')
+    if (!knownFee(form.pendriveStatus)) return showToast('Choose the audio track (pendrive): received, not received, or doubt', 'error')
     const previousNo = editing.arrivalNo || null
     const previousId = editing.id
     const res = editing.id ? await updatePlayer(editing.id, form) : await addPlayer(form)
@@ -391,6 +422,17 @@ export default function ManagePlayers() {
     showToast(feeStatus === 'received' ? 'Fee received' : feeStatus === 'doubt' ? 'Fee marked as doubt' : 'Fee marked as not received')
   }
 
+  const changePendrive = async (player, pendriveStatus) => {
+    if (!knownFee(pendriveStatus) || pendriveStatus === player.pendriveStatus) return
+    const res = await updatePlayer(player.id, {
+      ...player,
+      pendriveStatus,
+      members: asPeople(player.members),
+    })
+    if (!res.ok) return showToast(res.error, 'error')
+    showToast(pendriveStatus === 'received' ? 'Audio track received' : pendriveStatus === 'doubt' ? 'Audio track marked as doubt' : 'Audio track marked as not received')
+  }
+
   const openEdit = (player) => {
     const formatKey = player.formatKey || (player.type === 'group' ? 'group' : player.type === 'couple' ? 'couple' : 'solo')
     const people = asPeople(player.members)
@@ -402,6 +444,7 @@ export default function ManagePlayers() {
       participantTypeId: player.participantTypeId || '',
       classificationId: player.classificationId || '',
       feeStatus: knownFee(player.feeStatus),
+      pendriveStatus: knownFee(player.pendriveStatus),
       members: formatKey === 'solo' ? [] : people.length ? people : [{ name: '', age: '' }, { name: '', age: '' }],
     })
   }
@@ -414,7 +457,7 @@ export default function ManagePlayers() {
       <div className="toolbar">
         <div className="tabs">
           {FORMAT_TABS.map(({ key, label, icon: Icon }) => (
-            <button key={key} className={`tab ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}>
+            <button key={key} className={`tab ${tab === key ? 'active' : ''}`} onClick={() => changeTab(key)}>
               <Icon /> {label} ({players.filter((p) => p.type === key).length})
             </button>
           ))}
@@ -436,7 +479,7 @@ export default function ManagePlayers() {
       </div>
 
       <p className="muted small">
-        Excel imports are marked Fee received. Spot registration asks for the fee. Not received and Doubt stay highlighted. Mark Arrived to issue the category ID.
+        Excel imports are marked Fee received. Spot registration asks for the fee and the audio track (pendrive). Not received and Doubt stay highlighted in red. Arrived issues the category ID.
         {query ? ' Showing matches from every format.' : ''}
       </p>
 
@@ -449,6 +492,7 @@ export default function ManagePlayers() {
                 <th>Category</th>
                 <th>Contact</th>
                 <th>Fee</th>
+                <th>Audio track(Pendrive)</th>
                 <th>Arrival ID</th>
                 <th></th>
               </tr>
@@ -456,7 +500,8 @@ export default function ManagePlayers() {
             <tbody>
               {list.map((player) => {
                 const fee = knownFee(player.feeStatus)
-                const alert = player.feeStatus === 'not_received' || player.feeStatus === 'doubt'
+                const pendrive = knownFee(player.pendriveStatus)
+                const alert = needsAttention(player.feeStatus) || needsAttention(player.pendriveStatus) || !pendrive
                 const typeName = participantTypes.find((item) => item.id === player.participantTypeId)?.name
                 return (
                   <tr key={player.id} className={`${settings.livePlayerId === player.id ? 'is-live-row' : ''} ${alert ? 'is-alert-row' : ''}`}>
@@ -473,7 +518,7 @@ export default function ManagePlayers() {
                     <td className="muted small">{[player.phone, player.email].filter(Boolean).join(' · ') || '—'}</td>
                     <td>
                       <select
-                        className={`fee-select ${alert ? 'alert' : fee || 'pending'}`}
+                        className={`fee-select ${needsAttention(fee) ? 'alert' : fee || 'pending'}`}
                         value={fee}
                         onChange={(e) => changeFee(player, e.target.value)}
                         aria-label={`Fee for ${player.name}`}
@@ -484,10 +529,23 @@ export default function ManagePlayers() {
                         ))}
                       </select>
                     </td>
+                    <td>
+                      <select
+                        className={`fee-select ${needsAttention(pendrive) || !pendrive ? 'alert' : pendrive}`}
+                        value={pendrive}
+                        onChange={(e) => changePendrive(player, e.target.value)}
+                        aria-label={`Audio track for ${player.name}`}
+                      >
+                        {!pendrive && <option value="">Update audio track</option>}
+                        {FEE_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </td>
                     <td>{player.arrivalNo ? <span className="desk-pill id">{player.arrivalNo}</span> : '—'}</td>
                     <td className="actions">
                       <button className={`btn small ${player.arrived ? 'btn-arrived' : 'btn-ghost'}`} onClick={() => markArrived(player)}>
-                        {player.arrived ? 'Arrived' : 'Mark arrived'}
+                        Arrived
                       </button>
                       <button className="btn btn-ghost small" onClick={() => setProfile(player)}><FiEye /> View</button>
                       <button className={`btn small ${settings.livePlayerId === player.id ? 'btn-live' : 'btn-ghost'}`} onClick={() => goLive(player)}>
@@ -528,6 +586,7 @@ export default function ManagePlayers() {
               phone: editing.phone || '',
               club: editing.club || '',
               feeStatus: knownFee(editing.feeStatus),
+              pendriveStatus: knownFee(editing.pendriveStatus),
             }}
             participantTypes={participantTypes}
             classifications={classifications}
@@ -547,8 +606,11 @@ export default function ManagePlayers() {
             <div className="stack">
               <div className="desk-pills">
                 <span className="desk-pill ok">Registered</span>
-                <span className={`desk-pill ${(openProfile.feeStatus === 'not_received' || openProfile.feeStatus === 'doubt') ? 'alert' : (knownFee(openProfile.feeStatus) || 'pending')}`}>
-                  {FEE_OPTIONS.find((item) => item.value === openProfile.feeStatus)?.label || 'Update fee'}
+                <span className={`desk-pill ${needsAttention(openProfile.feeStatus) ? 'alert' : (knownFee(openProfile.feeStatus) || 'pending')}`}>
+                  Fee {FEE_OPTIONS.find((item) => item.value === openProfile.feeStatus)?.label || 'Update'}
+                </span>
+                <span className={`desk-pill ${needsAttention(openProfile.pendriveStatus) || !knownFee(openProfile.pendriveStatus) ? 'alert' : 'received'}`}>
+                  Audio track {FEE_OPTIONS.find((item) => item.value === openProfile.pendriveStatus)?.label || 'Update'}
                 </span>
                 <span className={`desk-pill ${openProfile.arrived ? 'received' : 'pending'}`}>{openProfile.arrived ? 'Arrived' : 'Not arrived'}</span>
                 {openProfile.arrivalNo && <span className="desk-pill id">{openProfile.arrivalNo}</span>}
@@ -575,13 +637,29 @@ export default function ManagePlayers() {
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
-                {(openProfile.feeStatus === 'not_received' || openProfile.feeStatus === 'doubt') && (
+                {needsAttention(openProfile.feeStatus) && (
                   <span className="fee-alert">This fee needs attention.</span>
+                )}
+              </label>
+              <label>
+                Audio track(Pendrive)
+                <select
+                  className={`fee-select ${needsAttention(openProfile.pendriveStatus) || !knownFee(openProfile.pendriveStatus) ? 'alert' : knownFee(openProfile.pendriveStatus)}`}
+                  value={knownFee(openProfile.pendriveStatus)}
+                  onChange={(e) => changePendrive(openProfile, e.target.value)}
+                >
+                  {!knownFee(openProfile.pendriveStatus) && <option value="">Update audio track</option>}
+                  {FEE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                {(needsAttention(openProfile.pendriveStatus) || !knownFee(openProfile.pendriveStatus)) && (
+                  <span className="fee-alert">This audio track needs attention.</span>
                 )}
               </label>
               <div className="form-actions">
                 <button type="button" className={`btn ${openProfile.arrived ? 'btn-arrived' : 'btn-ghost'}`} onClick={() => markArrived(openProfile)}>
-                  {openProfile.arrived ? 'Arrived' : 'Mark arrived'}
+                  Arrived
                 </button>
                 <button type="button" className="btn btn-ghost" onClick={() => { setProfile(null); openEdit(openProfile) }}>Edit</button>
                 <button type="button" className="btn btn-primary" onClick={() => { setProfile(null); goLive(openProfile) }}>Go live</button>

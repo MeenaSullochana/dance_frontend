@@ -15,12 +15,20 @@ export default defineConfig(({ mode }) => {
     port = 5173
   }
 
+  const backendUrl = String(env.VITE_BACKEND_URL || 'http://127.0.0.1:7000').replace(/\/$/, '')
+
   return {
     plugins: [react()],
     server: {
       port,
       strictPort: true,
       fs: { allow: [projectRoot] },
+      proxy: {
+        '/api': {
+          target: backendUrl,
+          changeOrigin: true,
+        },
+      },
     },
   }
 })

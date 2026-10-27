@@ -6,7 +6,7 @@ export default function MarkRounds({ label, value, max, onChange }) {
     <div className="mark-ratio">
       <div className="mark-ratio-head">
         <span>{label}</span>
-        <strong className="ratio-box">{selected} / {max}</strong>
+        <strong className="ratio-box">{selected}({max})</strong>
       </div>
       <div className="mark-rounds" role="group" aria-label={label}>
         {steps.map((step) => (
