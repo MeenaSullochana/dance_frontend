@@ -33,7 +33,12 @@ async function request(path, { method = 'GET', body, auth = true } = {}) {
 
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
-    const error = new Error(data.error || 'Request failed')
+    const message =
+      data.error ||
+      (response.status === 404
+        ? 'Sign in is not available on the server yet. Try again after the API is updated.'
+        : `Request failed (${response.status})`)
+    const error = new Error(message)
     error.status = response.status
     throw error
   }
@@ -50,7 +55,25 @@ export function getState() {
 
 export const login = (body) => request('/auth/login', { method: 'POST', body, auth: false })
 export const register = (body) => request('/auth/register', { method: 'POST', body, auth: false })
-export const signin = (body) => request('/auth/signin', { method: 'POST', body, auth: false })
+export async function signin(body) {
+  try {
+    return await request('/auth/signin', { method: 'POST', body, auth: false })
+  } catch (error) {
+    if (error.status !== 404) throw error
+  }
+  try {
+    return await request('/auth/register', { method: 'POST', body, auth: false })
+  } catch (error) {
+    if (error.status === 409 || /already registered/i.test(error.message || '')) {
+      return request('/auth/login', {
+        method: 'POST',
+        body: { ...body, audience: true, role: 'user' },
+        auth: false,
+      })
+    }
+    throw error
+  }
+}
 export const logout = () => request('/auth/logout', { method: 'POST' })
 export const createPlayer = (body) => request('/players', { method: 'POST', body })
 export const updatePlayer = (id, body) => request(`/players/${id}`, { method: 'PATCH', body })
