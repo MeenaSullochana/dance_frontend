@@ -1,8 +1,31 @@
 import { useState } from 'react'
-import { FiEdit2, FiPlus, FiTrash2 } from 'react-icons/fi'
+import { FiEdit2, FiHash, FiPlus, FiTrash2, FiUser, FiUsers } from 'react-icons/fi'
+import { FaUserFriends } from 'react-icons/fa'
+import { GiBallerinaShoes, GiLaurelCrown } from 'react-icons/gi'
 import { useApp } from '../../context/AppContext'
 import Modal from '../../components/Modal'
 import { agePayload, formatAgeRange, openAgeValue } from '../../utils/ageRange'
+
+const FORMAT_META = {
+  solo: {
+    label: 'Solo',
+    index: '01',
+    copy: 'Age categories such as Tiny Tots, Kids, Young Adults, Adults.',
+    Icon: GiBallerinaShoes,
+  },
+  couple: {
+    label: 'Couple',
+    index: '02',
+    copy: 'Junior and Senior only.',
+    Icon: FaUserFriends,
+  },
+  group: {
+    label: 'Group',
+    index: '03',
+    copy: 'Only three fees: Rotaractor, DPL, and Adults. Add Mixed, Ann, Annette under Adults.',
+    Icon: FiUsers,
+  },
+}
 
 const FORMAT_LABEL = { solo: 'Solo', couple: 'Couple', group: 'Group' }
 
@@ -164,15 +187,18 @@ export default function ManageClassifications() {
     const total = fields.reduce((sum, field) => sum + Number(field.maxMarks || 0), 0)
     const winner = winnerOf(item.id)
     return (
-      <div className="category-marks">
-        <p className="muted small">
-          Marks {total || 0}.
-          {winner ? <> Winner: <strong>{winner.name}</strong></> : ' No winner yet.'}
-        </p>
-        <div className="chip-row">
+      <div className="classify-marks">
+        <div className="classify-marks-meta">
+          <span><strong>{total || 0}</strong> marks</span>
+          {winner
+            ? <span className="classify-winner"><GiLaurelCrown /> {winner.name}</span>
+            : <span>No winner yet</span>}
+        </div>
+        <div className="classify-fields">
           {fields.map((field) => (
-            <span key={field.id} className="chip">
-              {field.name} · {field.maxMarks}
+            <span key={field.id} className="classify-field">
+              {field.name}
+              <em>{field.maxMarks}</em>
               <button
                 type="button"
                 className="icon-btn danger"
@@ -194,16 +220,22 @@ export default function ManageClassifications() {
     )
   }
 
-  const renderBandColumn = (formatKey) => (
-    <div className="panel glass">
-      <h2>{FORMAT_LABEL[formatKey]}</h2>
-      <p className="muted small">
-        {formatKey === 'solo'
-          ? 'Age categories such as Tiny Tots, Kids, Young Adults, Adults.'
-          : 'Junior and Senior only.'}
-      </p>
-      <form className="form" onSubmit={(event) => addBand(event, formatKey)}>
-        <div className="inline-form">
+  const renderBandColumn = (formatKey) => {
+    const meta = FORMAT_META[formatKey]
+    const Icon = meta.Icon
+    const bands = bandsFor(formatKey)
+    return (
+      <section className={`classify-lane lane-${formatKey}`}>
+        <header className="lane-head">
+          <span className="lane-index">{meta.index}</span>
+          <div className="lane-titles">
+            <span className="lane-kicker">Competition</span>
+            <h2>{meta.label}</h2>
+          </div>
+          <span className="lane-icon"><Icon /></span>
+        </header>
+        <p className="lane-copy">{meta.copy}</p>
+        <form className="lane-composer" onSubmit={(event) => addBand(event, formatKey)}>
           <input
             placeholder="Name"
             value={bandForms[formatKey].name}
@@ -227,24 +259,21 @@ export default function ManageClassifications() {
             onChange={(event) => setBandForms[formatKey]({ ...bandForms[formatKey], maxAge: event.target.value })}
           />
           <button className="btn btn-primary small"><FiPlus /> Add</button>
-        </div>
-      </form>
-      <table className="table">
-        <thead>
-          <tr><th>Name</th><th>Ages</th><th></th></tr>
-        </thead>
-        <tbody>
-          {bandsFor(formatKey).map((band) => {
+        </form>
+        <div className="lane-list">
+          {bands.map((band) => {
             const category = categoryForBand(band, formatKey)
             return (
-              <tr key={band.id}>
-                <td>
-                  <strong>{band.name}</strong>
-                  {category?.prefix ? <div className="muted small">ID {category.prefix}</div> : null}
-                  {category ? renderMarks(category) : <p className="muted small">Category will appear after save.</p>}
-                </td>
-                <td>{formatAgeRange(band)}</td>
-                <td className="actions">
+              <article key={band.id} className="lane-card">
+                <div className="lane-card-top">
+                  <div>
+                    <strong>{band.name}</strong>
+                    {category?.prefix ? <span className="id-stamp"><FiHash /> {category.prefix}</span> : null}
+                  </div>
+                  <span className="age-gem">{formatAgeRange(band)}</span>
+                </div>
+                {category ? renderMarks(category) : <p className="muted small">Category will appear after save.</p>}
+                <div className="lane-card-actions">
                   <button
                     className="btn btn-ghost small"
                     onClick={() => setEditing({
@@ -272,63 +301,66 @@ export default function ManageClassifications() {
                   >
                     <FiTrash2 />
                   </button>
-                </td>
-              </tr>
+                </div>
+              </article>
             )
           })}
-        </tbody>
-      </table>
-    </div>
-  )
+          {!bands.length && <div className="lane-empty">No {meta.label.toLowerCase()} categories yet.</div>}
+        </div>
+      </section>
+    )
+  }
 
   const renderGroupRow = (item, nested) => (
-    <article key={item.id} className={`group-cat ${nested ? 'is-child' : ''}`}>
-      <div className="toolbar">
-        <div className="grow">
-          <h3>{item.name}</h3>
-          {nested
-            ? <p className="muted small">Fee from {parentOf(item)?.name || 'Adults'} · Rs.{feeOf(item)}</p>
-            : <p className="muted small">Entry fee Rs.{feeOf(item)}</p>}
+    <article key={item.id} className={`lane-card group-card ${nested ? 'is-child' : ''}`}>
+      <div className="lane-card-top">
+        <div>
+          <strong>{item.name}</strong>
+          <p className="muted small">
+            {nested
+              ? `Fee from ${parentOf(item)?.name || 'Adults'} · Rs.${feeOf(item)}`
+              : `Entry fee Rs.${feeOf(item)}`}
+          </p>
         </div>
-        <div className="category-actions">
-          {!nested && <span className="fee-pill">Rs.{feeOf(item)}</span>}
-          <span className="fee-pill">{item.prefix ? `ID ${item.prefix}` : 'No ID prefix'}</span>
-          {!nested && (
-            <button className="btn btn-ghost small" onClick={() => { setUnderParent(item.id); setGroupForm({ name: '', price: '' }) }}>
-              <FiPlus /> Add under
-            </button>
-          )}
-          <button
-            className="btn btn-ghost small"
-            onClick={() => setEditing({
-              kind: 'category',
-              id: item.id,
-              name: item.name,
-              price: nested ? feeOf(item) : item.price ?? 0,
-              prefix: item.prefix || '',
-              showPrice: !nested,
-            })}
-          >
-            <FiEdit2 /> Edit
-          </button>
-          <button className="icon-btn danger" title="Remove category" onClick={() => removeCategory(item)}>
-            <FiTrash2 />
-          </button>
+        <div className="group-stamps">
+          {!nested && <span className="fee-gem">Rs.{feeOf(item)}</span>}
+          <span className="id-stamp"><FiHash /> {item.prefix || 'No prefix'}</span>
         </div>
       </div>
       {renderMarks(item)}
+      <div className="lane-card-actions">
+        {!nested && (
+          <button className="btn btn-ghost small" onClick={() => { setUnderParent(item.id); setGroupForm({ name: '', price: '' }) }}>
+            <FiPlus /> Add under
+          </button>
+        )}
+        <button
+          className="btn btn-ghost small"
+          onClick={() => setEditing({
+            kind: 'category',
+            id: item.id,
+            name: item.name,
+            price: nested ? feeOf(item) : item.price ?? 0,
+            prefix: item.prefix || '',
+            showPrice: !nested,
+          })}
+        >
+          <FiEdit2 /> Edit
+        </button>
+        <button className="icon-btn danger" title="Remove category" onClick={() => removeCategory(item)}>
+          <FiTrash2 />
+        </button>
+      </div>
       {underParent === item.id && (
-        <form className="form nest-form" onSubmit={(event) => addGroup(event, item.id)}>
-          <div className="inline-form">
-            <input
-              placeholder="e.g. Mixed, Ann, Annette"
-              value={groupForm.name}
-              onChange={(event) => setGroupForm({ ...groupForm, name: event.target.value })}
-              required
-            />
-            <button className="btn btn-primary small"><FiPlus /> Add</button>
-            <button type="button" className="btn btn-ghost small" onClick={() => setUnderParent(null)}>Cancel</button>
-          </div>
+        <form className="lane-composer nest-form" onSubmit={(event) => addGroup(event, item.id)}>
+          <input
+            placeholder="e.g. Mixed, Ann, Annette"
+            value={groupForm.name}
+            onChange={(event) => setGroupForm({ ...groupForm, name: event.target.value })}
+            required
+          />
+          <button className="btn btn-primary small"><FiPlus /> Add</button>
+          <button type="button" className="btn btn-ghost small" onClick={() => setUnderParent(null)}>Cancel</button>
         </form>
       )}
       {childrenOf(item.id).map((child) => renderGroupRow(child, true))}
@@ -336,74 +368,95 @@ export default function ManageClassifications() {
   )
 
   return (
-    <div className="stack">
-      <div className="banner glass ok">
-        <span>
-          Solo uses age categories (Tiny Tots, Kids, Young Adults, Adults). Couple uses Junior and Senior.
-          Group has three priced categories only: Rotaractor, DPL, and Adults. Under Adults add Mixed, Ann, Annette.
-        </span>
-      </div>
+    <div className="stack classify-stage">
+      <section className="classify-hero">
+        <div>
+          <span className="lane-kicker"><GiLaurelCrown /> Rule book</span>
+          <h2>Stage categories</h2>
+          <p>
+            Solo is by age, Couple is Junior or Senior, and Group has three priced houses — Rotaractor, DPL and Adults.
+            Mixed, Ann and Annette sit under Adults.
+          </p>
+        </div>
+        <div className="classify-hero-stats">
+          <span><b>{bandsFor('solo').length}</b> Solo</span>
+          <span><b>{bandsFor('couple').length}</b> Couple</span>
+          <span><b>{groupParents.length}</b> Group</span>
+        </div>
+      </section>
 
-      <div className="panel glass">
-        <h2>Who they are</h2>
-        <p className="muted small">Rotarian, Ann, Annette, Rotaractor, DPL — used when adding a participant. This is not the competition category.</p>
-        <form className="form" onSubmit={addType}>
-          <div className="inline-form">
-            <input className="grow" placeholder="e.g. Rotaractor" value={typeForm.name} onChange={(event) => setTypeForm({ name: event.target.value })} required />
-            <button className="btn btn-primary small"><FiPlus /> Add</button>
+      <section className="classify-roster">
+        <div className="roster-head">
+          <div>
+            <span className="lane-kicker"><FiUser /> Roster</span>
+            <h2>Who they are</h2>
+            <p className="muted small">Rotarian, Ann, Annette, Rotaractor, DPL — used when adding a participant, not the stage category.</p>
           </div>
-        </form>
-        <div className="chip-row type-chips">
+          <form className="lane-composer roster-composer" onSubmit={addType}>
+            <input placeholder="e.g. Rotaractor" value={typeForm.name} onChange={(event) => setTypeForm({ name: event.target.value })} required />
+            <button className="btn btn-primary small"><FiPlus /> Add</button>
+          </form>
+        </div>
+        <div className="roster-row">
           {participantTypes.map((type) => (
-            <span key={type.id} className="chip">
-              {type.name}
-              <button className="btn btn-ghost small" onClick={() => setEditing({ kind: 'type', id: type.id, name: type.name, formatKeys: type.formatKeys || [] })}>
-                <FiEdit2 />
-              </button>
-              <button
-                className="icon-btn danger"
-                onClick={async () => {
-                  if (!window.confirm(`Delete type "${type.name}"?`)) return
-                  const res = await deleteParticipantType(type.id)
-                  if (!res.ok) showToast(res.error, 'error')
-                }}
-              >
-                <FiTrash2 />
-              </button>
-            </span>
+            <article key={type.id} className="roster-tile">
+              <strong>{type.name}</strong>
+              <div className="lane-card-actions">
+                <button className="btn btn-ghost small" onClick={() => setEditing({ kind: 'type', id: type.id, name: type.name, formatKeys: type.formatKeys || [] })}>
+                  <FiEdit2 />
+                </button>
+                <button
+                  className="icon-btn danger"
+                  onClick={async () => {
+                    if (!window.confirm(`Delete type "${type.name}"?`)) return
+                    const res = await deleteParticipantType(type.id)
+                    if (!res.ok) showToast(res.error, 'error')
+                  }}
+                >
+                  <FiTrash2 />
+                </button>
+              </div>
+            </article>
           ))}
         </div>
-      </div>
+      </section>
 
       <div className="classify-grid">
         {renderBandColumn('solo')}
         {renderBandColumn('couple')}
-        <div className="panel glass">
-          <h2>Group</h2>
-          <p className="muted small">Only three fees: Rotaractor, DPL, and Adults. Add Mixed, Ann, Annette under Adults.</p>
-          <form className="form" onSubmit={(event) => addGroup(event)}>
-            <div className="inline-form">
-              <input
-                placeholder="Rotaractor, DPL, Adults"
-                value={underParent ? '' : groupForm.name}
-                onChange={(event) => { setUnderParent(null); setGroupForm({ ...groupForm, name: event.target.value }) }}
-                required={!underParent}
-              />
-              <input
-                type="number"
-                min="0"
-                placeholder="Fee Rs."
-                value={underParent ? '' : groupForm.price}
-                onChange={(event) => { setUnderParent(null); setGroupForm({ ...groupForm, price: event.target.value }) }}
-                required={!underParent}
-              />
-              <button className="btn btn-primary small"><FiPlus /> Add</button>
+        <section className="classify-lane lane-group">
+          <header className="lane-head">
+            <span className="lane-index">{FORMAT_META.group.index}</span>
+            <div className="lane-titles">
+              <span className="lane-kicker">Competition</span>
+              <h2>{FORMAT_META.group.label}</h2>
             </div>
+            <span className="lane-icon"><FiUsers /></span>
+          </header>
+          <p className="lane-copy">{FORMAT_META.group.copy}</p>
+          <form className="lane-composer" onSubmit={(event) => addGroup(event)}>
+            <input
+              placeholder="Rotaractor, DPL, Adults"
+              value={underParent ? '' : groupForm.name}
+              onChange={(event) => { setUnderParent(null); setGroupForm({ ...groupForm, name: event.target.value }) }}
+              required={!underParent}
+            />
+            <input
+              type="number"
+              min="0"
+              placeholder="Fee Rs."
+              value={underParent ? '' : groupForm.price}
+              onChange={(event) => { setUnderParent(null); setGroupForm({ ...groupForm, price: event.target.value }) }}
+              required={!underParent}
+            />
+            <button className="btn btn-primary small"><FiPlus /> Add</button>
           </form>
-          {groupParents.length
-            ? groupParents.map((item) => renderGroupRow(item, false))
-            : <div className="empty glass">No group categories yet. Add Rotaractor, DPL, and Adults.</div>}
-        </div>
+          <div className="lane-list">
+            {groupParents.length
+              ? groupParents.map((item) => renderGroupRow(item, false))
+              : <div className="lane-empty">No group categories yet. Add Rotaractor, DPL, and Adults.</div>}
+          </div>
+        </section>
       </div>
 
       {editing && (
@@ -434,9 +487,10 @@ export default function ManageClassifications() {
                     <input
                       value={editing.prefix || ''}
                       maxLength={6}
-                      placeholder="KS"
+                      placeholder="SK"
                       onChange={(event) => setEditing({ ...editing, prefix: event.target.value.toUpperCase() })}
                     />
+                    <span className="muted small">Registered ID / Chest ID. Example: SK1, SY1, SA1.</span>
                   </label>
                 )}
               </>
@@ -454,10 +508,10 @@ export default function ManageClassifications() {
                 <input
                   value={editing.prefix || ''}
                   maxLength={6}
-                  placeholder="KS"
+                  placeholder="SK"
                   onChange={(event) => setEditing({ ...editing, prefix: event.target.value.toUpperCase() })}
                 />
-                <span className="muted small">Used when a player is marked arrived. Example: KS-01.</span>
+                <span className="muted small">Registered ID / Chest ID prefix. Example: SK, SY, SA, CJ. Players get SK1, SK2.</span>
               </label>
             )}
             <div className="form-actions">

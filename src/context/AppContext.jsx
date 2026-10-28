@@ -16,6 +16,8 @@ const EMPTY = {
   classifications: [],
   markCriteria: [],
   categoryParameters: [],
+  panelJudges: [],
+  clubLeaders: [],
 }
 
 export function AppProvider({ children }) {
@@ -37,13 +39,15 @@ export function AppProvider({ children }) {
       users: payload.users || [],
       players: payload.players || [],
       scores: payload.scores || [],
-      settings: payload.settings || { resultsPublished: false, livePlayerId: null },
+      settings: payload.settings || { resultsPublished: false, livePlayerId: null, votingOpen: false },
       ageBands: payload.ageBands || [],
       participantTypes: payload.participantTypes || [],
       formats: payload.formats || [],
       classifications: payload.classifications || [],
       markCriteria: payload.markCriteria || [],
       categoryParameters: payload.categoryParameters || [],
+      panelJudges: payload.panelJudges || [],
+      clubLeaders: payload.clubLeaders || [],
     })
     setCurrentUser(payload.user || null)
     setOffline(false)
@@ -88,7 +92,7 @@ export function AppProvider({ children }) {
     }
   }, [ready, offline, refresh])
 
-  const { users, players, scores, settings, ageBands, participantTypes, formats, classifications, markCriteria, categoryParameters } = data
+  const { users, players, scores, settings, ageBands, participantTypes, formats, classifications, markCriteria, categoryParameters, panelJudges, clubLeaders } = data
   const criteria = useMemo(() => activeCriteria(markCriteria), [markCriteria])
   const maxTotal = useMemo(() => totalMax(criteria), [criteria])
   const criteriaFor = useCallback((classificationId) => {
@@ -173,7 +177,7 @@ export function AppProvider({ children }) {
     busy.current += 1
     generation.current += 1
     try {
-      const payload = await api.register(body)
+      const payload = await api.signin(body)
       if (payload.token) {
         api.setToken(payload.token)
         apply(payload)
@@ -230,6 +234,8 @@ export function AppProvider({ children }) {
     classifications,
     markCriteria,
     categoryParameters,
+    panelJudges,
+    clubLeaders,
     criteria,
     criteriaFor,
     maxTotal,
@@ -250,6 +256,8 @@ export function AppProvider({ children }) {
     updatePlayer: (id, changes) => run(() => api.updatePlayer(id, changes)),
     deletePlayer: (id) => run(() => api.deletePlayer(id)),
     addAccount: (account) => run(() => api.createAccount(account)),
+    updateAccount: (id, body) => run(() => api.updateAccount(id, body)),
+    moveAccount: (id, direction) => run(() => api.moveAccount(id, direction)),
     toggleAccount: (id) => run(() => api.toggleAccount(id)),
     deleteAccount: (id) => run(() => api.deleteAccount(id)),
     submitScore: (playerId, criteria, comment) => run(() => api.submitScore({ playerId, criteria, comment })),
@@ -258,6 +266,7 @@ export function AppProvider({ children }) {
     setResultsPublished: (resultsPublished) => run(() => api.updateSettings({ resultsPublished })),
     setPublicMaxMarks: (publicMaxMarks) => run(() => api.updateSettings({ publicMaxMarks })),
     setLivePlayer: (id, live) => run(() => api.setPlayerLive(id, { live })),
+    setPlayerVoting: (id, open) => run(() => api.setPlayerVoting(id, { open })),
     setPlayerArrived: (id, arrived) => run(() => api.setPlayerArrived(id, { arrived })),
     createMarkCriterion: (body) => run(() => api.createMarkCriterion(body)),
     updateMarkCriterion: (id, body) => run(() => api.updateMarkCriterion(id, body)),
@@ -276,6 +285,14 @@ export function AppProvider({ children }) {
     createClassification: (body) => run(() => api.createClassification(body)),
     updateClassification: (id, body) => run(() => api.updateClassification(id, body)),
     deleteClassification: (id) => run(() => api.deleteClassification(id)),
+    createPanelJudge: (body) => run(() => api.createPanelJudge(body)),
+    updatePanelJudge: (id, body) => run(() => api.updatePanelJudge(id, body)),
+    deletePanelJudge: (id) => run(() => api.deletePanelJudge(id)),
+    movePanelJudge: (id, direction) => run(() => api.movePanelJudge(id, direction)),
+    createClubLeader: (body) => run(() => api.createClubLeader(body)),
+    updateClubLeader: (id, body) => run(() => api.updateClubLeader(id, body)),
+    deleteClubLeader: (id) => run(() => api.deleteClubLeader(id)),
+    moveClubLeader: (id, direction) => run(() => api.moveClubLeader(id, direction)),
     previewGoogleForm: async (file) => {
       try {
         const fileBase64 = await api.fileToBase64(file)

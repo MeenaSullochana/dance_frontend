@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { FiUser, FiUsers, FiUserCheck, FiCheckCircle, FiAward, FiArrowRight, FiUpload, FiLayers } from 'react-icons/fi'
+import { FiUser, FiUsers, FiUserCheck, FiCheckCircle, FiAward, FiArrowRight, FiUpload, FiLayers, FiImage } from 'react-icons/fi'
 import { useApp } from '../../context/AppContext'
 import StatusBadge from '../../components/StatusBadge'
 import { playerPhoto } from '../../utils/playerPhoto'
@@ -79,7 +79,7 @@ export default function AdminDashboard() {
         <Link to="/admin/judges" className="glass admin-shortcut">
           <FiUserCheck />
           <strong>Judges</strong>
-          <span className="muted small">Create judge logins and turn them on or off.</span>
+          <span className="muted small">Create judges, posters, sort order, and Season 14 Panel visibility.</span>
         </Link>
         <Link to="/admin/users" className="glass admin-shortcut">
           <FiUser />
@@ -100,6 +100,11 @@ export default function AdminDashboard() {
           <FiLayers />
           <strong>Classifications</strong>
           <span className="muted small">Age bands, Rotaractor types, Solo/Couple/Group rules.</span>
+        </Link>
+        <Link to="/admin/website" className="glass admin-shortcut">
+          <FiImage />
+          <strong>Leadership</strong>
+          <span className="muted small">Add Rotary Club of Madras North leaders, photos, and sort order.</span>
         </Link>
       </div>
 

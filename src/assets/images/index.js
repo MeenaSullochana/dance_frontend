@@ -20,6 +20,13 @@ import streetNight from './dance/street-night.jpg'
 import chairman from './dod/chairman.jpg'
 import president from './dod/president.jpg'
 import secretary from './dod/secretary.jpg'
+import sathish from './dod/sathish.jpg'
+import sunita from './dod/sunita.jpg'
+import josephRaja from './dod/joseph-raja.jpg'
+import judgeVicky from './dod/judge-vicky-roshan.jpg'
+import judgeIshwarya from './dod/judge-ishwarya.jpg'
+import judgeMadhusudhanan from './dod/judge-madhusudhanan.jpg'
+import judgeVandana from './dod/judge-vandana.jpg'
 import dodBanner from './dod/dod-banner.jpg'
 import danceOfDistrict from './dod/dance-of-district.jpg'
 import dodRibbons from './dod/dod-ribbons.jpg'
@@ -42,6 +49,13 @@ export const dodImages = {
   chairman,
   president,
   secretary,
+  sathish,
+  sunita,
+  josephRaja,
+  judgeVicky,
+  judgeIshwarya,
+  judgeMadhusudhanan,
+  judgeVandana,
   dodBanner,
   danceOfDistrict,
   dodRibbons,

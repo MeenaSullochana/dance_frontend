@@ -4,7 +4,7 @@ import { homePath } from '../constants/scoring'
 
 export default function ProtectedRoute({ role, children }) {
   const { currentUser } = useApp()
-  if (!currentUser) return <Navigate to="/login" replace state={{ audience: true }} />
+  if (!currentUser) return <Navigate to={role === 'user' ? '/signin' : '/login'} replace />
   if (role && currentUser.role !== role) return <Navigate to={homePath(currentUser.role)} replace />
   return children
 }

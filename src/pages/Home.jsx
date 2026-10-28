@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   FiLogIn,
@@ -15,6 +15,8 @@ import {
   FiChevronUp,
   FiClock,
   FiDownload,
+  FiX,
+  FiZoomIn,
 } from 'react-icons/fi'
 import {
   GiMusicalNotes,
@@ -32,11 +34,20 @@ import FloatingContact from '../components/FloatingContact'
 import SiteFooter from '../components/SiteFooter'
 import { SOCIAL_LINKS } from '../constants/contact'
 import { playerPhoto } from '../utils/playerPhoto'
+import { registeredId } from '../utils/playerIds'
 import { categoryPlaces, PLACE_LABELS } from '../utils/podium'
 import { memberLabel } from '../utils/member'
 import { homePath } from '../constants/scoring'
 import { participantsPath } from '../utils/participantType'
 import { DANCE_STYLES, STYLE_GROUPS } from '../constants/danceStyles'
+import { sitePhoto, bySortOrder, visibleSitePeople } from '../utils/sitePeople'
+
+const LEADER_ICONS = {
+  crown: GiLaurelCrown,
+  edit: FiEdit3,
+  users: FiUsers,
+  award: FiAward,
+}
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
@@ -61,16 +72,28 @@ const REGISTER_PERKS = [
   { icon: TbInfinity, title: 'Unlimited', text: 'Entries in every category' },
 ]
 
-const CLUB_LEADERS = [
-  { name: 'Rtn. Nagarajan S', title: 'President', image: dodImages.president, icon: GiLaurelCrown },
-  { name: 'Rtn. Divya Subramanian', title: 'Secretary', image: dodImages.secretary, icon: FiEdit3 },
-]
-
 export default function Home() {
-  const { players, playerStats, settings, currentUser, judges, maxTotal, classifications } = useApp()
+  const { players, playerStats, settings, currentUser, judges, activeJudges, maxTotal, classifications, clubLeaders } = useApp()
+  const judgePosters = bySortOrder(judges.filter((judge) => judge.showOnPanel))
+  const leaders = visibleSitePeople(clubLeaders)
   const [tab, setTab] = useState('single')
   const [styleGroup, setStyleGroup] = useState('All')
   const [showAllStyles, setShowAllStyles] = useState(false)
+  const [selectedJudge, setSelectedJudge] = useState(null)
+
+  useEffect(() => {
+    if (!selectedJudge) return undefined
+    const onKey = (event) => {
+      if (event.key === 'Escape') setSelectedJudge(null)
+    }
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [selectedJudge])
 
   const filteredStyles = styleGroup === 'All' ? DANCE_STYLES : DANCE_STYLES.filter((s) => s.group === styleGroup)
   const visibleStyles = showAllStyles ? filteredStyles : filteredStyles.slice(0, STYLES_PREVIEW)
@@ -91,19 +114,17 @@ export default function Home() {
       icon: FiUser,
       value: players.filter((p) => p.type === 'single').length,
       label: 'Solo',
-      to: role ? participantsPath(role, 'single') : '/login',
-      state: role ? undefined : { audience: true },
+      to: role ? participantsPath(role, 'single') : '/signin',
     },
     {
       icon: FiUsers,
       value: players.filter((p) => p.type === 'group').length,
       label: 'Groups',
-      to: role ? participantsPath(role, 'group') : '/login',
-      state: role ? undefined : { audience: true },
+      to: role ? participantsPath(role, 'group') : '/signin',
     },
     {
       icon: FiUserCheck,
-      value: judges.length,
+      value: activeJudges.length,
       label: 'Judges',
       to: role === 'admin' ? '/admin/judges' : role ? homePath(role) : '/login',
     },
@@ -133,8 +154,8 @@ export default function Home() {
         </a>
 
         <div className="nav-right">
-          <Link to={currentUser ? homePath(currentUser.role) : '/login'} state={currentUser ? undefined : { audience: true }} className="btn btn-primary">
-            <FiLogIn /> <span className="nav-login-text">{currentUser ? 'Dashboard' : 'Login'}</span>
+          <Link to={currentUser ? homePath(currentUser.role) : '/signin'} className="btn btn-primary">
+            <FiLogIn /> <span className="nav-login-text">{currentUser ? 'Dashboard' : 'Sign in'}</span>
           </Link>
         </div>
       </header>
@@ -166,8 +187,8 @@ export default function Home() {
                 <FiLogIn /> Open Dashboard
               </Link>
             ) : (
-              <Link to="/login" state={{ audience: true }} className="btn btn-primary">
-                <FiLogIn /> Login as Audience
+              <Link to="/signin" className="btn btn-primary">
+                <FiLogIn /> Sign in as Audience
               </Link>
             )}
             <a href={REGISTER_FORM_URL} target="_blank" rel="noreferrer" className="btn btn-ghost">
@@ -260,43 +281,76 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="public-section wide">
-        <div className="chairman glass">
-          <img src={dodImages.chairman} alt="Rtn. Shabeer Nazeer" />
-          <div className="chairman-info">
-            <span className="chip"><GiLaurelCrown /> Chairman</span>
-            <h2 className="section-title">Rtn. Shabeer Nazeer</h2>
-            <p className="chairman-role">Chairman - Dance of District</p>
-            <p className="muted">Rotary Year 2026-27</p>
-            <p className="muted small">Dance of District · Season 14 · Signature Event of Rotary Club of Madras North · Hosted at Ethiraj College Auditorium</p>
+      {judgePosters.length > 0 && (
+        <section className="public-section wide" id="judges">
+          <div className="section-intro">
+            <span className="chip"><GiLaurelCrown /> Meet Our Judges</span>
+            <h2 className="section-title">Season 14 Panel</h2>
+            <p className="muted">The experts scoring Dance of District this year.</p>
           </div>
-        </div>
-      </section>
+          <div className="judge-cards">
+            {judgePosters.map((judge) => {
+              const poster = { ...judge, image: sitePhoto(judge) }
+              return (
+                <article
+                  key={judge.id}
+                  className="judge-card glass"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View ${judge.name} poster`}
+                  onClick={() => setSelectedJudge(poster)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      setSelectedJudge(poster)
+                    }
+                  }}
+                >
+                  <div className="judge-card-photo">
+                    <img src={poster.image} alt={`${judge.name}, judge for Dance of District Season 14`} loading="lazy" />
+                    <span className="judge-card-view"><FiZoomIn /> View</span>
+                  </div>
+                  <div className="judge-card-info">
+                    <h3>{judge.name}</h3>
+                    <p className="leader-role">{judge.panelRole || judge.role}</p>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
-      <section className="public-section wide">
-        <div className="section-intro">
-          <span className="chip"><FiUsers /> Club Leadership</span>
-          <h2 className="section-title">Rotary Club of Madras North</h2>
-          <p className="muted">Leading the club through Rotary Year 2026-27</p>
-        </div>
-        <div className="leaders">
-          {CLUB_LEADERS.map(({ name, title, image, icon: Icon }) => (
-            <article key={name} className="leader-card glass">
-              <div className="leader-photo">
-                <img src={image} alt={name} loading="lazy" />
-                <span className="leader-badge"><Icon /> {title}</span>
-              </div>
-              <div className="leader-info">
-                <h3>{name}</h3>
-                <p className="leader-role">Club {title}</p>
-                <span className="leader-rule" />
-                <p className="muted small">Rotary Year 2026-27</p>
-                <p className="muted small">Rotary Club of Madras North</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+      {leaders.length > 0 && (
+        <section className="public-section wide">
+          <div className="section-intro">
+            <span className="chip"><FiUsers /> Club Leadership</span>
+            <h2 className="section-title">Rotary Club of Madras North</h2>
+            <p className="muted">Leading the club through Rotary Year 2026-27</p>
+          </div>
+          <div className="leaders" style={{ '--leader-count': Math.max(leaders.length, 1) }}>
+            {leaders.map((leader) => {
+              const Icon = LEADER_ICONS[leader.icon] || FiUsers
+              return (
+                <article key={leader.id} className="leader-card glass">
+                  <div className="leader-photo">
+                    <img src={sitePhoto(leader)} alt={leader.name} loading="lazy" />
+                    <span className="leader-badge"><Icon /> {leader.title}</span>
+                  </div>
+                  <div className="leader-info">
+                    <h3>{leader.name}</h3>
+                    <p className="leader-role">{leader.role}</p>
+                    <span className="leader-rule" />
+                    {(leader.lines || []).map((line) => (
+                      <p key={line} className="muted small">{line}</p>
+                    ))}
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       <section className="public-section wide" id="venue">
         <div className="section-intro">
@@ -378,8 +432,8 @@ export default function Home() {
             <h2>Results coming soon</h2>
             <p className="muted">Our judges are scoring the performances. Check back after the results are published.</p>
             {!currentUser && (
-              <Link to="/login" state={{ audience: true }} className="btn btn-ghost">
-                <FiLogIn /> Login to follow along <FiArrowRight />
+              <Link to="/signin" className="btn btn-ghost">
+                <FiLogIn /> Sign in to follow along <FiArrowRight />
               </Link>
             )}
           </div>
@@ -441,7 +495,7 @@ export default function Home() {
                   <div className="lb-name">
                     <strong>{p.name}</strong>
                     <span className="muted small">
-                      #{p.chestNo} · {p.category}
+                      {registeredId(p)} · {p.category}
                       {p.type === 'group' && p.members?.length ? ` · ${p.members.map(memberLabel).join(', ')}` : ''}
                     </span>
                   </div>
@@ -462,6 +516,26 @@ export default function Home() {
       <SiteFooter />
 
       <FloatingContact />
+
+      {selectedJudge && (
+        <div
+          className="judge-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label={selectedJudge.name}
+          onMouseDown={() => setSelectedJudge(null)}
+        >
+          <button type="button" className="judge-lightbox-close" onClick={() => setSelectedJudge(null)} aria-label="Close">
+            <span className="modal-close-ring" aria-hidden="true" />
+            <FiX />
+          </button>
+          <img
+            src={selectedJudge.image}
+            alt={`${selectedJudge.name}, judge for Dance of District Season 14`}
+            onMouseDown={(event) => event.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   )
 }

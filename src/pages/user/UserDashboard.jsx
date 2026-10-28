@@ -6,6 +6,7 @@ import { useApp } from '../../context/AppContext'
 import PlayerCard from '../../components/PlayerCard'
 import StagePopup from '../../components/StagePopup'
 import { playerPhoto } from '../../utils/playerPhoto'
+import { isPerforming, isVotingOpen, registeredId } from '../../utils/playerIds'
 import { categoryPlaces, PLACE_LABELS } from '../../utils/podium'
 import { readParticipantType } from '../../utils/participantType'
 
@@ -33,6 +34,12 @@ export default function UserDashboard() {
       setStageId(null)
     }
   }, [settings.livePlayerId])
+
+  useEffect(() => {
+    if (settings.livePlayerId && settings.votingOpen) {
+      setStageId(settings.livePlayerId)
+    }
+  }, [settings.votingOpen, settings.livePlayerId])
 
   const changeTab = (key) => {
     setTab(key)
@@ -64,7 +71,7 @@ export default function UserDashboard() {
 
       {livePlayer && (
         <button type="button" className="banner glass live-banner" onClick={() => setStageId(livePlayer.id)}>
-          <FiRadio /> <strong>{livePlayer.name}</strong> is on stage. Click to open.
+          <FiRadio /> <strong>{livePlayer.name}</strong> {isVotingOpen(settings, livePlayer) ? 'is on stage. Click to vote.' : 'is performing now.'}
         </button>
       )}
       {published && (
@@ -148,7 +155,8 @@ export default function UserDashboard() {
             <tbody>
               {list.map((player) => {
                 const typeName = participantTypes.find((item) => item.id === player.participantTypeId)?.name
-                const live = settings.livePlayerId === player.id
+                const live = isPerforming(settings, player)
+                const voting = isVotingOpen(settings, player)
                 const mine = scores.find((score) => score.playerId === player.id && score.judgeId === currentUser.id)
                 const stats = playerStats[player.id]
                 return (
@@ -158,7 +166,7 @@ export default function UserDashboard() {
                         <img src={playerPhoto(player)} alt="" />
                         <span>
                           <strong>{player.name}</strong>
-                          <span className="muted small">#{player.chestNo}{typeName ? ` · ${typeName}` : ''}{player.age != null ? ` · Age ${player.age}` : ''}</span>
+                          <span className="muted small">{registeredId(player)}{player.arrivalNo ? ` · ${player.arrivalNo}` : ''}{typeName ? ` · ${typeName}` : ''}{player.age != null ? ` · Age ${player.age}` : ''}</span>
                         </span>
                       </div>
                     </td>
@@ -171,8 +179,8 @@ export default function UserDashboard() {
                       )}
                     </td>
                     <td className="actions">
-                      <button className={`btn ${live && !mine ? 'btn-primary' : 'btn-ghost'} small`} onClick={() => setStageId(player.id)}>
-                        <FiRadio /> {mine ? 'Voted' : live ? 'Vote' : 'Vote'}
+                      <button className={`btn ${voting && !mine ? 'btn-primary' : 'btn-ghost'} small`} onClick={() => setStageId(player.id)}>
+                        <FiRadio /> {mine ? 'Voted' : voting ? 'Vote' : live ? 'Performing' : 'Vote'}
                       </button>
                     </td>
                   </tr>

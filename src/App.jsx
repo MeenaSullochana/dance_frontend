@@ -4,12 +4,14 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Toast from './components/Toast'
 import Home from './pages/Home'
 import Login from './pages/Login'
+import SignIn from './pages/SignIn'
 import NotFound from './pages/NotFound'
 import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import ManagePlayers from './pages/admin/ManagePlayers'
 import ManageJudges from './pages/admin/ManageJudges'
+import ManageWebsite from './pages/admin/ManageWebsite'
 import ManageUsers from './pages/admin/ManageUsers'
 import ManageClassifications from './pages/admin/ManageClassifications'
 import ManageMarks from './pages/admin/ManageMarks'
@@ -25,6 +27,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/register" element={<SignIn />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
 
@@ -42,6 +46,7 @@ export default function App() {
           <Route path="classifications" element={<ManageClassifications />} />
           <Route path="marks" element={<ManageMarks />} />
           <Route path="judges" element={<ManageJudges />} />
+          <Route path="website" element={<ManageWebsite />} />
           <Route path="users" element={<ManageUsers />} />
           <Route path="results" element={<AdminResults />} />
         </Route>

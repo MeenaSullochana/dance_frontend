@@ -50,6 +50,7 @@ export function getState() {
 
 export const login = (body) => request('/auth/login', { method: 'POST', body, auth: false })
 export const register = (body) => request('/auth/register', { method: 'POST', body, auth: false })
+export const signin = (body) => request('/auth/signin', { method: 'POST', body, auth: false })
 export const logout = () => request('/auth/logout', { method: 'POST' })
 export const createPlayer = (body) => request('/players', { method: 'POST', body })
 export const updatePlayer = (id, body) => request(`/players/${id}`, { method: 'PATCH', body })
@@ -57,11 +58,14 @@ export const deletePlayer = (id) => request(`/players/${id}`, { method: 'DELETE'
 export const toggleWinner = (id) => request(`/players/${id}/winner`, { method: 'PATCH' })
 export const findWinners = () => request('/scores/winners', { method: 'POST' })
 export const createAccount = (body) => request('/accounts', { method: 'POST', body })
+export const updateAccount = (id, body) => request(`/accounts/${id}`, { method: 'PATCH', body })
+export const moveAccount = (id, direction) => request(`/accounts/${id}/move`, { method: 'PATCH', body: { direction } })
 export const approveAccount = (id) => request(`/accounts/${id}/approve`, { method: 'PATCH' })
 export const toggleAccount = (id) => request(`/accounts/${id}/toggle`, { method: 'PATCH' })
 export const deleteAccount = (id) => request(`/accounts/${id}`, { method: 'DELETE' })
 export const submitScore = (body) => request('/scores', { method: 'POST', body })
 export const setPlayerLive = (id, body) => request(`/players/${id}/live`, { method: 'PATCH', body })
+export const setPlayerVoting = (id, body) => request(`/players/${id}/voting`, { method: 'PATCH', body })
 export const setPlayerArrived = (id, body) => request(`/players/${id}/arrive`, { method: 'PATCH', body })
 export const createMarkCriterion = (body) => request('/mark-criteria', { method: 'POST', body })
 export const updateMarkCriterion = (id, body) => request(`/mark-criteria/${id}`, { method: 'PATCH', body })
@@ -84,6 +88,14 @@ export const deleteClassification = (id) => request(`/classifications/${id}`, { 
 export const createCategoryParameter = (body) => request('/category-parameters', { method: 'POST', body })
 export const updateCategoryParameter = (id, body) => request(`/category-parameters/${id}`, { method: 'PATCH', body })
 export const deleteCategoryParameter = (id) => request(`/category-parameters/${id}`, { method: 'DELETE' })
+export const createPanelJudge = (body) => request('/panel-judges', { method: 'POST', body })
+export const updatePanelJudge = (id, body) => request(`/panel-judges/${id}`, { method: 'PATCH', body })
+export const deletePanelJudge = (id) => request(`/panel-judges/${id}`, { method: 'DELETE' })
+export const movePanelJudge = (id, direction) => request(`/panel-judges/${id}/move`, { method: 'PATCH', body: { direction } })
+export const createClubLeader = (body) => request('/club-leaders', { method: 'POST', body })
+export const updateClubLeader = (id, body) => request(`/club-leaders/${id}`, { method: 'PATCH', body })
+export const deleteClubLeader = (id) => request(`/club-leaders/${id}`, { method: 'DELETE' })
+export const moveClubLeader = (id, direction) => request(`/club-leaders/${id}/move`, { method: 'PATCH', body: { direction } })
 
 export function fileToBase64(file) {
   return new Promise((resolve, reject) => {

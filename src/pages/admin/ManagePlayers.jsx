@@ -9,6 +9,7 @@ import { CATEGORIES } from '../../constants/scoring'
 import { DANCE_STYLES, STYLE_GROUPS } from '../../constants/danceStyles'
 import { asPeople, memberLabel } from '../../utils/member'
 import { playerPhoto } from '../../utils/playerPhoto'
+import { canGoLive, goLiveBlockedReason, isVotingOpen, registeredId } from '../../utils/playerIds'
 import { readParticipantType } from '../../utils/participantType'
 import { bandCoversAge, bandSpan, ageFloor } from '../../utils/ageRange'
 
@@ -350,6 +351,7 @@ export default function ManagePlayers() {
     updatePlayer,
     deletePlayer,
     setLivePlayer,
+    setPlayerVoting,
     setPlayerArrived,
     showToast,
   } = useApp()
@@ -382,7 +384,8 @@ export default function ManagePlayers() {
   const handleSave = async (form) => {
     if (!knownFee(form.feeStatus)) return showToast('Choose the fee: received, not received, or doubt', 'error')
     if (!knownFee(form.pendriveStatus)) return showToast('Choose the audio track (pendrive): received, not received, or doubt', 'error')
-    const previousNo = editing.arrivalNo || null
+    const previousArrival = editing.arrivalNo || null
+    const previousRegistered = editing.registeredId || null
     const previousId = editing.id
     const res = editing.id ? await updatePlayer(editing.id, form) : await addPlayer(form)
     if (!res.ok) return showToast(res.error, 'error')
@@ -390,8 +393,10 @@ export default function ManagePlayers() {
     showToast(editing.id ? 'Player updated' : `${form.formatKey === 'group' ? 'Group' : 'Player'} added`)
     setTab(form.type)
     setEditing(null)
-    if (saved && previousNo && saved.arrivalNo && saved.arrivalNo !== previousNo) {
-      setIdNotice({ name: saved.name, from: previousNo, to: saved.arrivalNo, category: saved.category })
+    if (saved && previousRegistered && saved.registeredId && saved.registeredId !== previousRegistered) {
+      setIdNotice({ kind: 'Registered ID', name: saved.name, from: previousRegistered, to: saved.registeredId, category: saved.category })
+    } else if (saved && previousArrival && saved.arrivalNo && saved.arrivalNo !== previousArrival) {
+      setIdNotice({ kind: 'Arrival ID', name: saved.name, from: previousArrival, to: saved.arrivalNo, category: saved.category })
     }
   }
 
@@ -407,16 +412,30 @@ export default function ManagePlayers() {
       setStageId(player.id)
       return
     }
+    if (!canGoLive(player)) {
+      showToast(goLiveBlockedReason(player), 'error')
+      return
+    }
     const res = await setLivePlayer(player.id, true)
     if (!res.ok) return showToast(res.error, 'error')
     setStageId(player.id)
-    showToast(`${player.name} is live`)
+    showToast(`${player.name} is performing`)
+  }
+
+  const startVoting = async (player) => {
+    if (settings.livePlayerId !== player.id) {
+      return showToast('Go live before starting voting', 'error')
+    }
+    const res = await setPlayerVoting(player.id, true)
+    if (!res.ok) return showToast(res.error, 'error')
+    setStageId(player.id)
+    showToast('Voting started')
   }
 
   const markArrived = async (player) => {
     const res = await setPlayerArrived(player.id, !player.arrived)
     if (!res.ok) return showToast(res.error, 'error')
-    showToast(player.arrived ? `${player.name} marked not arrived` : `${player.name} arrived`)
+    showToast(player.arrived ? `${player.name} marked not arrived. Arrival ID removed.` : `${player.name} arrived`)
   }
 
   const changeFee = async (player, feeStatus) => {
@@ -487,7 +506,7 @@ export default function ManagePlayers() {
       </div>
 
       <p className="muted small">
-        Excel imports are marked Fee received. Spot registration asks for the fee and the audio track (pendrive). Not received and Doubt stay highlighted in red. Arrived issues the category ID.
+        Excel imports are marked Fee received. Spot registration asks for the fee and the audio track (pendrive). Not received and Doubt stay highlighted in red. Registered ID uses the category prefix (SK, SY, SA). Arrived issues Arrival ID (S1, C1, G1). Go live needs Arrived and track received. After Go live the performer is on stage. Click Voting started before judges and audience can put marks.
         {query ? ' Showing matches from every format.' : ''}
       </p>
 
@@ -501,6 +520,7 @@ export default function ManagePlayers() {
                 <th>Contact</th>
                 <th>Fee</th>
                 <th>Audio track(Pendrive)</th>
+                <th>Registered ID</th>
                 <th>Arrival ID</th>
                 <th></th>
               </tr>
@@ -518,7 +538,7 @@ export default function ManagePlayers() {
                         <img src={playerPhoto(player)} alt="" />
                         <span>
                           <strong>{player.name}</strong>
-                          <span className="muted small">#{player.chestNo}{typeName ? ` · ${typeName}` : ''}{player.age != null ? ` · Age ${player.age}` : ''}</span>
+                          <span className="muted small">{registeredId(player)}{typeName ? ` · ${typeName}` : ''}{player.age != null ? ` · Age ${player.age}` : ''}</span>
                         </span>
                       </button>
                     </td>
@@ -550,15 +570,27 @@ export default function ManagePlayers() {
                         ))}
                       </select>
                     </td>
+                    <td>{player.registeredId ? <span className="desk-pill id">{player.registeredId}</span> : '—'}</td>
                     <td>{player.arrivalNo ? <span className="desk-pill id">{player.arrivalNo}</span> : '—'}</td>
                     <td className="actions">
                       <button className={`btn small ${player.arrived ? 'btn-arrived' : 'btn-ghost'}`} onClick={() => markArrived(player)}>
                         Arrived
                       </button>
                       <button className="btn btn-ghost small" onClick={() => setProfile(player)}><FiEye /> View</button>
-                      <button className={`btn small ${settings.livePlayerId === player.id ? 'btn-live' : 'btn-ghost'}`} onClick={() => goLive(player)}>
+                      <button
+                        className={`btn small ${settings.livePlayerId === player.id ? 'btn-live' : 'btn-ghost'}${settings.livePlayerId !== player.id && !canGoLive(player) ? ' is-locked' : ''}`}
+                        disabled={settings.livePlayerId !== player.id && !canGoLive(player)}
+                        title={settings.livePlayerId === player.id || canGoLive(player) ? undefined : goLiveBlockedReason(player)}
+                        onClick={() => goLive(player)}
+                      >
                         <FiRadio /> {settings.livePlayerId === player.id ? 'On stage' : 'Go live'}
                       </button>
+                      {settings.livePlayerId === player.id && !isVotingOpen(settings, player) && (
+                        <button className="btn btn-primary small" onClick={() => startVoting(player)}>
+                          Voting started
+                        </button>
+                      )}
+                      {isVotingOpen(settings, player) && <span className="desk-pill received">Voting</span>}
                       <button className="btn btn-ghost small" onClick={() => openEdit(player)}><FiEdit2 /> Edit</button>
                       <button className="btn btn-danger small" onClick={() => handleDelete(player)}><FiTrash2 /></button>
                     </td>
@@ -621,8 +653,9 @@ export default function ManagePlayers() {
                   Audio track {FEE_OPTIONS.find((item) => item.value === openProfile.pendriveStatus)?.label || 'Update'}
                 </span>
                 <span className={`desk-pill ${openProfile.arrived ? 'received' : 'pending'}`}>{openProfile.arrived ? 'Arrived' : 'Not arrived'}</span>
-                {openProfile.arrivalNo && <span className="desk-pill id">{openProfile.arrivalNo}</span>}
-                {settings.livePlayerId === openProfile.id && <span className="desk-pill alert">Live</span>}
+                {openProfile.registeredId && <span className="desk-pill id">Reg {openProfile.registeredId}</span>}
+                {openProfile.arrivalNo && <span className="desk-pill id">Arr {openProfile.arrivalNo}</span>}
+                {settings.livePlayerId === openProfile.id && <span className="desk-pill alert">{isVotingOpen(settings, openProfile) ? 'Voting' : 'Performing'}</span>}
               </div>
               <p><strong>Category.</strong> {openProfile.category}{openProfile.age != null ? ` · Age ${openProfile.age}` : ''}</p>
               <p><strong>Type.</strong> {participantTypes.find((item) => item.id === openProfile.participantTypeId)?.name || '—'}</p>
@@ -670,7 +703,20 @@ export default function ManagePlayers() {
                   Arrived
                 </button>
                 <button type="button" className="btn btn-ghost" onClick={() => { setProfile(null); openEdit(openProfile) }}>Edit</button>
-                <button type="button" className="btn btn-primary" onClick={() => { setProfile(null); goLive(openProfile) }}>Go live</button>
+                <button
+                  type="button"
+                  className={`btn btn-primary${settings.livePlayerId !== openProfile.id && !canGoLive(openProfile) ? ' is-locked' : ''}`}
+                  disabled={settings.livePlayerId !== openProfile.id && !canGoLive(openProfile)}
+                  title={settings.livePlayerId === openProfile.id || canGoLive(openProfile) ? undefined : goLiveBlockedReason(openProfile)}
+                  onClick={() => { setProfile(null); goLive(openProfile) }}
+                >
+                  {settings.livePlayerId === openProfile.id ? 'On stage' : 'Go live'}
+                </button>
+                {settings.livePlayerId === openProfile.id && !isVotingOpen(settings, openProfile) && (
+                  <button type="button" className="btn btn-primary" onClick={() => { setProfile(null); startVoting(openProfile) }}>
+                    Voting started
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -678,10 +724,10 @@ export default function ManagePlayers() {
       )}
 
       {idNotice && (
-        <Modal title="Arrival ID updated" onClose={() => setIdNotice(null)}>
+        <Modal title={`${idNotice.kind || 'ID'} updated`} onClose={() => setIdNotice(null)}>
           <div className="stack">
             <p>{idNotice.name} is now in <strong>{idNotice.category}</strong>.</p>
-            <p className="muted">The previous ID {idNotice.from} is replaced because the age moved this entry to another category.</p>
+            <p className="muted">The previous ID {idNotice.from} is replaced because this entry moved category or format.</p>
             <p className="id-hero">{idNotice.to}</p>
             <div className="form-actions">
               <button type="button" className="btn btn-primary" onClick={() => setIdNotice(null)}>Done</button>

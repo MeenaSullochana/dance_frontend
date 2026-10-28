@@ -3,6 +3,7 @@ import { FaUserFriends } from 'react-icons/fa'
 import { useApp } from '../context/AppContext'
 import StatusBadge from './StatusBadge'
 import { playerPhoto } from '../utils/playerPhoto'
+import { registeredId } from '../utils/playerIds'
 
 function formatLabel(player) {
   if (player.type === 'group' || player.formatKey === 'group') {
@@ -35,7 +36,7 @@ export default function PlayerCard({ player, stats, children, showScore = true, 
     <div className={`player-card glass ${live ? 'is-live' : ''} ${alert ? 'is-alert' : ''}`}>
       <div className="player-card-img">
         <img src={playerPhoto(player)} alt={player.name} />
-        <span className="chest-no">#{player.chestNo}</span>
+        <span className="chest-no">{registeredId(player)}</span>
         {live && <span className="live-pill">LIVE</span>}
         <div className="player-card-status">
           <StatusBadge status={stats.status} />

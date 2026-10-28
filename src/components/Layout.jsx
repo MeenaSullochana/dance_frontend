@@ -12,6 +12,7 @@ import {
   FiLayers,
   FiUpload,
   FiSliders,
+  FiImage,
 } from 'react-icons/fi'
 import { useApp } from '../context/AppContext'
 import { SITE } from '../config/site'
@@ -25,6 +26,7 @@ const LINKS = {
     { to: '/admin/classifications', label: 'Classifications', icon: FiLayers },
     { to: '/admin/marks', label: 'Mark Categories', icon: FiSliders },
     { to: '/admin/judges', label: 'Judges', icon: FiUserCheck },
+    { to: '/admin/website', label: 'Leadership', icon: FiImage },
     { to: '/admin/users', label: 'Audience', icon: FiUser },
     { to: '/admin/results', label: 'Results', icon: FiAward },
   ],
@@ -42,6 +44,7 @@ const TITLES = {
   '/admin/classifications': 'Classifications',
   '/admin/marks': 'Mark Categories',
   '/admin/judges': 'Manage Judges',
+  '/admin/website': 'Club Leadership',
   '/admin/users': 'Manage Audience',
   '/admin/results': 'Results & Publishing',
   '/judge': 'Participants',
@@ -65,7 +68,7 @@ export default function Layout() {
 
   const handleLogout = async () => {
     await logout()
-    navigate('/login', { state: { audience: true } })
+    navigate(currentUser.role === 'user' ? '/signin' : '/login')
   }
 
   return (

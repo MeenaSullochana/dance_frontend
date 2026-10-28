@@ -5,6 +5,7 @@ import { FaUserFriends } from 'react-icons/fa'
 import { useApp } from '../../context/AppContext'
 import StagePopup from '../../components/StagePopup'
 import { playerPhoto } from '../../utils/playerPhoto'
+import { isPerforming, isVotingOpen, registeredId } from '../../utils/playerIds'
 import { readParticipantType } from '../../utils/participantType'
 
 export default function JudgeDashboard() {
@@ -31,6 +32,12 @@ export default function JudgeDashboard() {
       setStageId(null)
     }
   }, [settings.livePlayerId])
+
+  useEffect(() => {
+    if (settings.livePlayerId && settings.votingOpen) {
+      setStageId(settings.livePlayerId)
+    }
+  }, [settings.votingOpen, settings.livePlayerId])
 
   const changeTab = (key) => {
     setTab(key)
@@ -109,7 +116,8 @@ export default function JudgeDashboard() {
               {list.map((player) => {
                 const mine = myScore(player.id)
                 const typeName = participantTypes.find((item) => item.id === player.participantTypeId)?.name
-                const live = settings.livePlayerId === player.id
+                const live = isPerforming(settings, player)
+                const voting = isVotingOpen(settings, player)
                 return (
                   <tr key={player.id} className={live ? 'is-live-row' : ''}>
                     <td>
@@ -117,7 +125,7 @@ export default function JudgeDashboard() {
                         <img src={playerPhoto(player)} alt="" />
                         <span>
                           <strong>{player.name}</strong>
-                          <span className="muted small">#{player.chestNo}{typeName ? ` · ${typeName}` : ''}{player.age != null ? ` · Age ${player.age}` : ''}</span>
+                          <span className="muted small">{registeredId(player)}{player.arrivalNo ? ` · ${player.arrivalNo}` : ''}{typeName ? ` · ${typeName}` : ''}{player.age != null ? ` · Age ${player.age}` : ''}</span>
                         </span>
                       </div>
                     </td>
@@ -125,8 +133,8 @@ export default function JudgeDashboard() {
                     <td className="muted small">{[player.phone, player.email].filter(Boolean).join(' · ') || '—'}</td>
                     <td>{mine ? <span className="desk-pill received"><FiCheck /> {mine.total}/{playerStats[player.id].maxTotal}</span> : '—'}</td>
                     <td className="actions">
-                      <button className={`btn ${live ? 'btn-primary' : 'btn-ghost'} small`} onClick={() => setStageId(player.id)}>
-                        <FiEdit3 /> {live ? (mine ? 'Edit' : 'Give marks') : 'Vote'}
+                      <button className={`btn ${voting ? 'btn-primary' : 'btn-ghost'} small`} onClick={() => setStageId(player.id)}>
+                        <FiEdit3 /> {voting ? (mine ? 'Edit' : 'Give marks') : live ? 'Performing' : 'Vote'}
                       </button>
                     </td>
                   </tr>

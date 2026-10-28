@@ -6,6 +6,7 @@ import { TERMS, PRIVACY } from '../constants/legal'
 
 const QUICK_LINKS = [
   { label: 'Register', href: '/#register' },
+  { label: 'Judges', href: '/#judges' },
   { label: 'Venue', href: '/#venue' },
   { label: 'Dance Styles', href: '/#styles' },
   { label: 'Results', href: '/#results' },

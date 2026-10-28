@@ -4,6 +4,7 @@ import { FiArrowLeft, FiSave } from 'react-icons/fi'
 import { useApp } from '../../context/AppContext'
 import StatusBadge from '../../components/StatusBadge'
 import { playerPhoto } from '../../utils/playerPhoto'
+import { isVotingOpen, registeredId } from '../../utils/playerIds'
 import { memberLabel } from '../../utils/member'
 import MarkRounds from '../../components/MarkRounds'
 
@@ -26,7 +27,7 @@ export default function ScorePlayer() {
   const [comment, setComment] = useState(existing?.comment || '')
 
   if (!player) return <Navigate to="/judge" replace />
-  const live = settings.livePlayerId === player.id
+  const voting = isVotingOpen(settings, player)
 
   const total = criteria.reduce((sum, item) => sum + Number(marks[item.key] || 0), 0)
   const percent = (total / maxTotal) * 100
@@ -49,7 +50,7 @@ export default function ScorePlayer() {
         <div className="panel glass score-player">
           <img src={playerPhoto(player)} alt={player.name} />
           <h2>{player.name}</h2>
-          <span className="chip">#{player.chestNo} · {player.category}</span>
+          <span className="chip">{registeredId(player)}{player.arrivalNo ? ` · ${player.arrivalNo}` : ''} · {player.category}</span>
           <span className="muted">{player.type === 'group' ? 'Group performance' : 'Solo performance'}</span>
           {player.type === 'group' && (
             <div className="member-chips">
@@ -59,9 +60,9 @@ export default function ScorePlayer() {
           <StatusBadge status={playerStats[player.id].status} />
         </div>
 
-        {!live ? (
+        {!voting ? (
           <div className="panel glass score-form">
-            <h2>Voting closed</h2>
+            <h2>{settings.livePlayerId === player.id ? `${player.name} is performing now` : 'Voting closed'}</h2>
             <p className="muted">Voting lines will open only during/ after the performance</p>
           </div>
         ) : (
