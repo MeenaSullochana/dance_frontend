@@ -21,7 +21,7 @@ const FEE_LABEL = {
   doubt: 'Doubt',
 }
 
-export default function PlayerCard({ player, stats, children, showScore = true, participantTypes = [], live = false }) {
+export default function PlayerCard({ player, stats, children, showScore = true, participantTypes = [], live = false, publicView = false }) {
   const { classifications } = useApp()
   const category = classifications.find((item) => item.id === player.classificationId)
   const parent = category?.parentId && classifications.find((item) => item.id === category.parentId)
@@ -30,7 +30,7 @@ export default function PlayerCard({ player, stats, children, showScore = true, 
   const FormatIcon = format.icon
   const typeName = participantTypes.find((item) => item.id === player.participantTypeId)?.name
   const fee = player.feeStatus || 'pending'
-  const alert = fee === 'not_received' || fee === 'doubt'
+  const alert = !publicView && (fee === 'not_received' || fee === 'doubt')
 
   return (
     <div className={`player-card glass ${live ? 'is-live' : ''} ${alert ? 'is-alert' : ''}`}>
@@ -44,10 +44,11 @@ export default function PlayerCard({ player, stats, children, showScore = true, 
       </div>
       <div className="player-card-body">
         <div className="desk-pills">
-          <span className="desk-pill ok">Registered</span>
-          <span className={`desk-pill ${alert ? 'alert' : fee || 'pending'}`}>{FEE_LABEL[fee] || 'Update fee'}</span>
+          {player.registeredId && <span className="desk-pill id">{player.registeredId}</span>}
           {player.arrivalNo && <span className="desk-pill id">{player.arrivalNo}</span>}
-          {player.arrived && !player.arrivalNo && <span className="desk-pill id">Arrived</span>}
+          {!publicView && <span className="desk-pill ok">Registered</span>}
+          {!publicView && <span className={`desk-pill ${alert ? 'alert' : fee || 'pending'}`}>{FEE_LABEL[fee] || 'Update fee'}</span>}
+          {!publicView && player.arrived && !player.arrivalNo && <span className="desk-pill id">Arrived</span>}
         </div>
         <h3>{player.name}</h3>
         <div className="player-meta">
@@ -55,12 +56,14 @@ export default function PlayerCard({ player, stats, children, showScore = true, 
           {player.danceStyle && player.danceStyle !== player.category && (
             <span className="chip small">{player.danceStyle}</span>
           )}
-          <span className="muted small">
-            <FormatIcon /> {format.text}
-            {player.age != null && ` · Age ${player.age}`}
-            {typeName && ` · ${typeName}`}
-          </span>
-          {(player.phone || player.email) && (
+          {!publicView && (
+            <span className="muted small">
+              <FormatIcon /> {format.text}
+              {player.age != null && ` · Age ${player.age}`}
+              {typeName && ` · ${typeName}`}
+            </span>
+          )}
+          {!publicView && (player.phone || player.email) && (
             <span className="muted small">{[player.phone, player.email].filter(Boolean).join(' · ')}</span>
           )}
         </div>
@@ -72,7 +75,7 @@ export default function PlayerCard({ player, stats, children, showScore = true, 
             <span className="small">
               {stats.count ? `Judges ${stats.avg.toFixed(1)} / ${stats.maxTotal || 0}` : 'No judge marks yet'}
               {stats.publicCount > 0 && ` · Public ${stats.publicAvg.toFixed(1)} (${stats.publicCount} users)`}
-              {price != null && ` · Rs.${price}`}
+              {!publicView && price != null && ` · Rs.${price}`}
             </span>
           </div>
         )}

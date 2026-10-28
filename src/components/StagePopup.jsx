@@ -110,10 +110,13 @@ export default function StagePopup({ player, mode, onClose }) {
           <span className="chip">{registeredId(player)}{player.arrivalNo ? ` · ${player.arrivalNo}` : ''}</span>
           <span className="muted small">
             {classification || player.category}
-            {typeName ? ` · ${typeName}` : ''}
-            {player.age != null ? ` · Age ${player.age}` : ''}
+            {mode === 'user' && player.danceStyle && player.danceStyle !== (classification || player.category)
+              ? ` · ${player.danceStyle}`
+              : ''}
+            {mode !== 'user' && typeName ? ` · ${typeName}` : ''}
+            {mode !== 'user' && player.age != null ? ` · Age ${player.age}` : ''}
           </span>
-          {player.members?.length > 0 && (
+          {mode !== 'user' && player.members?.length > 0 && (
             <div className="member-chips">
               {player.members.map((member) => (
                 <span key={memberLabel(member)} className="chip small">{memberLabel(member)}</span>

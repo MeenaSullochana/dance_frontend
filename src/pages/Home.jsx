@@ -36,7 +36,6 @@ import { SOCIAL_LINKS } from '../constants/contact'
 import { playerPhoto } from '../utils/playerPhoto'
 import { registeredId } from '../utils/playerIds'
 import { categoryPlaces, PLACE_LABELS } from '../utils/podium'
-import { memberLabel } from '../utils/member'
 import { homePath } from '../constants/scoring'
 import { participantsPath } from '../utils/participantType'
 import { DANCE_STYLES, STYLE_GROUPS } from '../constants/danceStyles'
@@ -495,8 +494,8 @@ export default function Home() {
                   <div className="lb-name">
                     <strong>{p.name}</strong>
                     <span className="muted small">
-                      {registeredId(p)} · {p.category}
-                      {p.type === 'group' && p.members?.length ? ` · ${p.members.map(memberLabel).join(', ')}` : ''}
+                      {registeredId(p)}{p.arrivalNo ? ` · ${p.arrivalNo}` : ''} · {p.category}
+                      {p.danceStyle && p.danceStyle !== p.category ? ` · ${p.danceStyle}` : ''}
                     </span>
                   </div>
                   <div className="lb-score">

@@ -11,7 +11,7 @@ import { categoryPlaces, PLACE_LABELS } from '../../utils/podium'
 import { readParticipantType } from '../../utils/participantType'
 
 export default function UserDashboard() {
-  const { players, playerStats, scores, settings, currentUser, participantTypes, classifications } = useApp()
+  const { players, playerStats, scores, settings, currentUser, classifications } = useApp()
   const [searchParams, setSearchParams] = useSearchParams()
   const [tab, setTab] = useState(() => readParticipantType(searchParams.get('type')))
   const [search, setSearch] = useState('')
@@ -51,7 +51,9 @@ export default function UserDashboard() {
     const filtered = players.filter((player) => {
       if (!query && player.type !== tab) return false
       if (!query) return true
-      return [player.name, player.phone, player.email, player.category].some((value) => String(value || '').toLowerCase().includes(query))
+      return [player.name, player.category, player.danceStyle, player.registeredId, player.arrivalNo].some((value) =>
+        String(value || '').toLowerCase().includes(query),
+      )
     })
     return published ? [...filtered].sort((a, b) => playerStats[b.id].avg - playerStats[a.id].avg) : filtered
   }, [players, playerStats, tab, published, search])
@@ -93,11 +95,11 @@ export default function UserDashboard() {
                     return person ? (
                       <div key={place.place}>
                         <span className="muted small">{PLACE_LABELS[place.place]}</span>
-                        <PlayerCard player={person} stats={playerStats[person.id]} showScore />
+                        <PlayerCard player={person} stats={playerStats[person.id]} showScore publicView />
                       </div>
                     ) : null
                   }) : winner ? (
-                    <PlayerCard player={winner} stats={playerStats[winner.id]} showScore />
+                    <PlayerCard player={winner} stats={playerStats[winner.id]} showScore publicView />
                   ) : (
                     <span className="muted">No places yet</span>
                   )}
@@ -113,7 +115,7 @@ export default function UserDashboard() {
                   <div key={item.danceStyle} className="winner-slot">
                     <span className="muted small">Choreography</span>
                     <strong>{item.danceStyle}</strong>
-                    {person ? <PlayerCard player={person} stats={playerStats[person.id]} showScore /> : <span className="muted">No winner</span>}
+                    {person ? <PlayerCard player={person} stats={playerStats[person.id]} showScore publicView /> : <span className="muted">No winner</span>}
                   </div>
                 )
               })}
@@ -136,7 +138,7 @@ export default function UserDashboard() {
         </div>
         <label className="input-icon search">
           <FiSearch />
-          <input placeholder="Name, mobile, or email" value={search} onChange={(event) => setSearch(event.target.value)} />
+          <input placeholder="Name, category, or dance" value={search} onChange={(event) => setSearch(event.target.value)} />
         </label>
       </div>
 
@@ -146,15 +148,16 @@ export default function UserDashboard() {
             <thead>
               <tr>
                 <th>Participant</th>
+                <th>Registered ID</th>
+                <th>Arrival ID</th>
                 <th>Category</th>
-                <th>Contact</th>
+                <th>Dance</th>
                 <th>Overall</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {list.map((player) => {
-                const typeName = participantTypes.find((item) => item.id === player.participantTypeId)?.name
                 const live = isPerforming(settings, player)
                 const voting = isVotingOpen(settings, player)
                 const mine = scores.find((score) => score.playerId === player.id && score.judgeId === currentUser.id)
@@ -166,12 +169,13 @@ export default function UserDashboard() {
                         <img src={playerPhoto(player)} alt="" />
                         <span>
                           <strong>{player.name}</strong>
-                          <span className="muted small">{registeredId(player)}{player.arrivalNo ? ` · ${player.arrivalNo}` : ''}{typeName ? ` · ${typeName}` : ''}{player.age != null ? ` · Age ${player.age}` : ''}</span>
                         </span>
                       </div>
                     </td>
-                    <td>{player.category}</td>
-                    <td className="muted small">{[player.phone, player.email].filter(Boolean).join(' · ') || '—'}</td>
+                    <td>{registeredId(player) || '—'}</td>
+                    <td>{player.arrivalNo || '—'}</td>
+                    <td>{player.category || '—'}</td>
+                    <td>{player.danceStyle || '—'}</td>
                     <td>
                       {mine ? <span className="desk-pill id">{mine.criteria?.overall ?? mine.total}/{settings.publicMaxMarks || 10}</span> : '—'}
                       {published && stats.publicCount > 0 && (
