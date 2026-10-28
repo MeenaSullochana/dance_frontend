@@ -56,22 +56,20 @@ export function getState() {
 export const login = (body) => request('/auth/login', { method: 'POST', body, auth: false })
 export const register = (body) => request('/auth/register', { method: 'POST', body, auth: false })
 export async function signin(body) {
-  try {
-    return await request('/auth/signin', { method: 'POST', body, auth: false })
-  } catch (error) {
-    if (error.status !== 404) throw error
+  const payload = {
+    name: String(body?.name || '').trim(),
+    phone: String(body?.phone || body?.mobile || '').trim(),
+    club: String(body?.club || '').trim(),
   }
   try {
-    return await request('/auth/register', { method: 'POST', body, auth: false })
+    return await request('/auth/register', { method: 'POST', body: payload, auth: false })
   } catch (error) {
-    if (error.status === 409 || /already registered/i.test(error.message || '')) {
-      return request('/auth/login', {
-        method: 'POST',
-        body: { ...body, audience: true, role: 'user' },
-        auth: false,
-      })
-    }
-    throw error
+    if (error.status !== 409 && !/already registered/i.test(error.message || '')) throw error
+    return request('/auth/login', {
+      method: 'POST',
+      body: { phone: payload.phone, audience: true, role: 'user' },
+      auth: false,
+    })
   }
 }
 export const logout = () => request('/auth/logout', { method: 'POST' })
