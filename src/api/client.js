@@ -1,4 +1,4 @@
-import { API_URL } from '../config/site'
+import { getApiUrl } from '../config/site'
 
 const TOKEN_KEY = 'dance-api-token'
 
@@ -18,7 +18,7 @@ async function request(path, { method = 'GET', body, auth = true } = {}) {
 
   let response
   try {
-    response = await fetch(`${API_URL}${path}`, {
+    response = await fetch(`${getApiUrl()}${path}`, {
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),

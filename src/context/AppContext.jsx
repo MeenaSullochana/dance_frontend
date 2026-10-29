@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import * as api from '../api/client'
 import { activeCriteria, PASS_PERCENT, totalMax } from '../constants/scoring'
-import { SITE } from '../config/site'
+import { resolveBackend, SITE } from '../config/site'
 
 const AppContext = createContext(null)
 
@@ -63,17 +63,17 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     let ignore = false
-    api
-      .getState()
-      .then((payload) => {
-        if (!ignore) apply(payload)
-      })
-      .catch(() => {
+    ;(async () => {
+      try {
+        await resolveBackend()
+        if (ignore) return
+        apply(await api.getState())
+      } catch {
         if (!ignore) setOffline(true)
-      })
-      .finally(() => {
+      } finally {
         if (!ignore) setReady(true)
-      })
+      }
+    })()
     return () => {
       ignore = true
     }
@@ -215,6 +215,7 @@ export function AppProvider({ children }) {
     setReady(false)
     setOffline(false)
     try {
+      await resolveBackend()
       apply(await api.getState())
     } catch {
       setOffline(true)
@@ -338,7 +339,8 @@ export function AppProvider({ children }) {
   }
 
   if (offline) {
-    const local = SITE.backendUrl.includes('localhost') || SITE.backendUrl.includes('127.0.0.1')
+    const local = SITE.backendTarget === 'local'
+    const netlify = typeof window !== 'undefined' && /netlify/i.test(window.location.hostname)
     return (
       <div className="boot">
         <div className="boot-card glass">
@@ -348,9 +350,13 @@ export function AppProvider({ children }) {
               <>
                 The API at <b>{SITE.backendUrl}</b> is offline. From the project root run <b>npm run dev</b> so the API and website start together, then click Try again.
               </>
+            ) : netlify ? (
+              <>
+                Netlify first tries Render (<b>{SITE.backends.render}</b>), then live (<b>{SITE.backends.live}</b>). Neither responded. Put your real Render URL in <b>VITE_BACKEND_RENDER_URL</b> if it is different, then redeploy.
+              </>
             ) : (
               <>
-                The {SITE.backendTarget} API at <b>{SITE.backendUrl}</b> did not respond. Make sure that backend is running, and that this website origin is allowed in CORS. Then click Try again.
+                The live API at <b>{SITE.backends.live}</b> did not respond. Make sure that backend is running, and that this website origin is allowed in CORS. Then click Try again.
               </>
             )}
           </p>
