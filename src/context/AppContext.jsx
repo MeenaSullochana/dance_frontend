@@ -1,9 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import * as api from '../api/client'
 import { activeCriteria, PASS_PERCENT, totalMax } from '../constants/scoring'
-import { resolveBackend, SITE } from '../config/site'
+import { preferredTargets, selectBackend, setActiveBackend } from '../config/site'
 
 const AppContext = createContext(null)
+const CACHE_KEY = 'dance-public-cache'
 
 const EMPTY = {
   users: [],
@@ -20,11 +21,59 @@ const EMPTY = {
   clubLeaders: [],
 }
 
+function snapshot(payload) {
+  return {
+    users: payload.users || [],
+    players: payload.players || [],
+    scores: payload.scores || [],
+    settings: payload.settings || { resultsPublished: false },
+    ageBands: payload.ageBands || [],
+    participantTypes: payload.participantTypes || [],
+    formats: payload.formats || [],
+    classifications: payload.classifications || [],
+    markCriteria: payload.markCriteria || [],
+    categoryParameters: payload.categoryParameters || [],
+    panelJudges: payload.panelJudges || [],
+    clubLeaders: payload.clubLeaders || [],
+  }
+}
+
+function readCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') return null
+    return { ...EMPTY, ...snapshot(parsed) }
+  } catch {
+    return null
+  }
+}
+
+function writeCache(payload) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(snapshot(payload)))
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+function isStatePayload(payload) {
+  return Boolean(
+    payload &&
+      typeof payload === 'object' &&
+      (Array.isArray(payload.users) || Array.isArray(payload.players) || payload.settings),
+  )
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 export function AppProvider({ children }) {
-  const [data, setData] = useState(EMPTY)
+  const [data, setData] = useState(() => readCache() || EMPTY)
   const [currentUser, setCurrentUser] = useState(null)
-  const [ready, setReady] = useState(false)
-  const [offline, setOffline] = useState(false)
+  const [connecting, setConnecting] = useState(true)
   const [toast, setToast] = useState(null)
   const busy = useRef(0)
   const generation = useRef(0)
@@ -35,22 +84,11 @@ export function AppProvider({ children }) {
   }, [])
 
   const apply = useCallback((payload) => {
-    setData({
-      users: payload.users || [],
-      players: payload.players || [],
-      scores: payload.scores || [],
-      settings: payload.settings || { resultsPublished: false, livePlayerId: null, votingOpen: false },
-      ageBands: payload.ageBands || [],
-      participantTypes: payload.participantTypes || [],
-      formats: payload.formats || [],
-      classifications: payload.classifications || [],
-      markCriteria: payload.markCriteria || [],
-      categoryParameters: payload.categoryParameters || [],
-      panelJudges: payload.panelJudges || [],
-      clubLeaders: payload.clubLeaders || [],
-    })
+    const next = snapshot(payload)
+    setData(next)
     setCurrentUser(payload.user || null)
-    setOffline(false)
+    setConnecting(false)
+    writeCache(next)
   }, [])
 
   const refresh = useCallback(async () => {
@@ -58,20 +96,31 @@ export function AppProvider({ children }) {
     if (busy.current) return
     const payload = await api.getState()
     if (busy.current || stamp !== generation.current) return
+    if (!isStatePayload(payload)) return
     apply(payload)
   }, [apply])
 
   useEffect(() => {
     let ignore = false
+    selectBackend()
     ;(async () => {
-      try {
-        await resolveBackend()
-        if (ignore) return
-        apply(await api.getState())
-      } catch {
-        if (!ignore) setOffline(true)
-      } finally {
-        if (!ignore) setReady(true)
+      let delay = 1500
+      while (!ignore) {
+        for (const target of preferredTargets()) {
+          if (ignore) return
+          setActiveBackend(target)
+          try {
+            const payload = await api.getState()
+            if (ignore) return
+            if (!isStatePayload(payload)) throw new Error('warming')
+            apply(payload)
+            return
+          } catch {
+            // Render may still be waking; try the next host, then retry.
+          }
+        }
+        await wait(delay)
+        delay = Math.min(delay + 1500, 8000)
       }
     })()
     return () => {
@@ -80,7 +129,7 @@ export function AppProvider({ children }) {
   }, [apply])
 
   useEffect(() => {
-    if (!ready || offline) return undefined
+    if (connecting) return undefined
     const tick = () => {
       if (document.visibilityState === 'visible') refresh().catch(() => {})
     }
@@ -90,7 +139,7 @@ export function AppProvider({ children }) {
       clearInterval(timer)
       window.removeEventListener('focus', tick)
     }
-  }, [ready, offline, refresh])
+  }, [connecting, refresh])
 
   const { users, players, scores, settings, ageBands, participantTypes, formats, classifications, markCriteria, categoryParameters, panelJudges, clubLeaders } = data
   const criteria = useMemo(() => activeCriteria(markCriteria), [markCriteria])
@@ -211,19 +260,6 @@ export function AppProvider({ children }) {
     }
   }
 
-  const retry = async () => {
-    setReady(false)
-    setOffline(false)
-    try {
-      await resolveBackend()
-      apply(await api.getState())
-    } catch {
-      setOffline(true)
-    } finally {
-      setReady(true)
-    }
-  }
-
   const value = {
     users,
     players,
@@ -246,6 +282,7 @@ export function AppProvider({ children }) {
     approvedMembers,
     pendingMembers,
     currentUser,
+    connecting,
     playerStats,
     toast,
     showToast,
@@ -324,46 +361,6 @@ export function AppProvider({ children }) {
       }
       return result
     },
-  }
-
-  if (!ready) {
-    return (
-      <div className="boot">
-        <div className="boot-card glass">
-          <span className="boot-spinner" />
-          <strong>Dance of District</strong>
-          <p className="muted">Connecting to the server…</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (offline) {
-    const local = SITE.backendTarget === 'local'
-    const netlify = typeof window !== 'undefined' && /netlify/i.test(window.location.hostname)
-    return (
-      <div className="boot">
-        <div className="boot-card glass">
-          <strong>Cannot reach the API</strong>
-          <p className="muted">
-            {local ? (
-              <>
-                The API at <b>{SITE.backendUrl}</b> is offline. From the project root run <b>npm run dev</b> so the API and website start together, then click Try again.
-              </>
-            ) : netlify ? (
-              <>
-                Netlify first tries Render (<b>{SITE.backends.render}</b>), then live (<b>{SITE.backends.live}</b>). Neither responded. Put your real Render URL in <b>VITE_BACKEND_RENDER_URL</b> if it is different, then redeploy.
-              </>
-            ) : (
-              <>
-                The live API at <b>{SITE.backends.live}</b> did not respond. Make sure that backend is running, and that this website origin is allowed in CORS. Then click Try again.
-              </>
-            )}
-          </p>
-          <button className="btn btn-primary" onClick={retry}>Try again</button>
-        </div>
-      </div>
-    )
   }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

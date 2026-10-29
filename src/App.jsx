@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import Toast from './components/Toast'
+import { useApp } from './context/AppContext'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import SignIn from './pages/SignIn'
@@ -21,9 +22,22 @@ import AdminResults from './pages/admin/AdminResults'
 import JudgeDashboard from './pages/judge/JudgeDashboard'
 import ScorePlayer from './pages/judge/ScorePlayer'
 
+function ConnectingBanner() {
+  const { connecting, clubLeaders, players } = useApp()
+  const cached = (clubLeaders || []).length > 0 || (players || []).length > 0
+  if (!connecting || cached) return null
+  return (
+    <div className="connect-banner">
+      <span className="boot-spinner" />
+      Loading live event data…
+    </div>
+  )
+}
+
 export default function App() {
   return (
     <>
+      <ConnectingBanner />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
