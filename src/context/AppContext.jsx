@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import * as api from '../api/client'
 import { activeCriteria, PASS_PERCENT, totalMax } from '../constants/scoring'
-import { preferredTargets, selectBackend, setActiveBackend } from '../config/site'
+import { warmupBackends } from '../config/site'
 
 const AppContext = createContext(null)
 const CACHE_KEY = 'dance-public-cache'
@@ -102,25 +102,22 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     let ignore = false
-    selectBackend()
+    warmupBackends()
     ;(async () => {
-      let delay = 1500
+      let delay = 1200
       while (!ignore) {
-        for (const target of preferredTargets()) {
+        const stamp = generation.current
+        try {
+          const payload = await api.getState()
           if (ignore) return
-          setActiveBackend(target)
-          try {
-            const payload = await api.getState()
-            if (ignore) return
-            if (!isStatePayload(payload)) throw new Error('warming')
-            apply(payload)
-            return
-          } catch {
-            // Render may still be waking; try the next host, then retry.
-          }
+          if (stamp !== generation.current) continue
+          if (!isStatePayload(payload)) throw new Error('warming')
+          apply(payload)
+          return
+        } catch {
+          await wait(delay)
+          delay = Math.min(delay + 1200, 5000)
         }
-        await wait(delay)
-        delay = Math.min(delay + 1500, 8000)
       }
     })()
     return () => {

@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { FiArrowLeft, FiUser, FiPhone, FiHome } from 'react-icons/fi'
 import { useApp } from '../context/AppContext'
+import { warmupBackends } from '../config/site'
 import { heroBg, rotaryDistrictLogo, dodLogo, rcmnEmblem } from '../assets/images'
 import { homePath } from '../constants/scoring'
 
@@ -14,6 +15,10 @@ export default function SignIn() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    warmupBackends()
+  }, [])
+
   if (currentUser) return <Navigate to={homePath(currentUser.role)} replace />
 
   const setField = (key) => (event) => setForm({ ...form, [key]: event.target.value })
@@ -22,7 +27,10 @@ export default function SignIn() {
     event.preventDefault()
     setError('')
     setLoading(true)
-    const res = await register({ name: form.name, phone: form.phone, club: form.club })
+    let res = await register({ name: form.name, phone: form.phone, club: form.club })
+    if (!res.ok && /starting|reach|Cannot reach|not available|50[234]/i.test(res.error || '')) {
+      res = await register({ name: form.name, phone: form.phone, club: form.club })
+    }
     setLoading(false)
     if (!res.ok) return setError(res.error)
     navigate(homePath(res.user.role))

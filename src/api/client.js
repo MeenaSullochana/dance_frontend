@@ -1,4 +1,4 @@
-import { getApiUrl } from '../config/site'
+import { ensureBackend, failoverTargets, getApiUrl, resetBackendChoice, setActiveBackend } from '../config/site'
 
 const TOKEN_KEY = 'dance-api-token'
 
@@ -11,38 +11,67 @@ export function setToken(token) {
   else localStorage.removeItem(TOKEN_KEY)
 }
 
+function failOver(status) {
+  return status === 0 || status === 404 || status === 502 || status === 503 || status === 504
+}
+
+async function fetchOnce(path, { method, headers, body }, target, timeoutMs) {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
+  try {
+    const response = await fetch(`${getApiUrl(target)}${path}`, {
+      method,
+      headers,
+      body,
+      signal: ctrl.signal,
+    })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      const error = new Error(
+        data.error ||
+          (response.status === 404
+            ? 'Sign in is not available on the server yet. Try again after the API is updated.'
+            : `Request failed (${response.status})`),
+      )
+      error.status = response.status
+      throw error
+    }
+    return data
+  } catch (error) {
+    if (error.status) throw error
+    const next = new Error(
+      error.name === 'AbortError'
+        ? 'The server is starting. Please tap Sign in again.'
+        : 'Cannot reach the server. From the project root run npm run dev (starts API + website), or start backend with npm run dev in the backend folder.',
+    )
+    next.status = 0
+    throw next
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 async function request(path, { method = 'GET', body, auth = true } = {}) {
   const headers = { 'Content-Type': 'application/json' }
   const token = auth ? getToken() : null
   if (token) headers.Authorization = `Bearer ${token}`
+  const payload = body === undefined ? undefined : JSON.stringify(body)
 
-  let response
-  try {
-    response = await fetch(`${getApiUrl()}${path}`, {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-    })
-  } catch {
-    const error = new Error(
-      'Cannot reach the server. From the project root run npm run dev (starts API + website), or start backend with npm run dev in the backend folder.',
-    )
-    error.status = 0
-    throw error
+  await ensureBackend()
+  const targets = failoverTargets()
+  let lastError
+  for (const target of targets) {
+    setActiveBackend(target)
+    try {
+      const data = await fetchOnce(path, { method, headers, body: payload }, target, target === 'render' ? 20000 : 8000)
+      return data
+    } catch (error) {
+      lastError = error
+      if (!failOver(error.status)) throw error
+      resetBackendChoice()
+    }
   }
-
-  const data = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    const message =
-      data.error ||
-      (response.status === 404
-        ? 'Sign in is not available on the server yet. Try again after the API is updated.'
-        : `Request failed (${response.status})`)
-    const error = new Error(message)
-    error.status = response.status
-    throw error
-  }
-  return data
+  throw lastError
 }
 
 export function getState() {

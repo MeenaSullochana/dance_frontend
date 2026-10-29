@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom'
+import { Route, Routes, useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import Toast from './components/Toast'
@@ -23,9 +23,11 @@ import JudgeDashboard from './pages/judge/JudgeDashboard'
 import ScorePlayer from './pages/judge/ScorePlayer'
 
 function ConnectingBanner() {
+  const { pathname } = useLocation()
   const { connecting, clubLeaders, players } = useApp()
+  const authPage = pathname === '/login' || pathname === '/signin' || pathname === '/register'
   const cached = (clubLeaders || []).length > 0 || (players || []).length > 0
-  if (!connecting || cached) return null
+  if (authPage || !connecting || cached) return null
   return (
     <div className="connect-banner">
       <span className="boot-spinner" />

@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { FiLock, FiMail, FiArrowLeft } from 'react-icons/fi'
 import { useApp } from '../context/AppContext'
+import { warmupBackends } from '../config/site'
 import { heroBg, rotaryDistrictLogo, dodLogo, rcmnEmblem } from '../assets/images'
 import { homePath } from '../constants/scoring'
 
@@ -15,6 +16,10 @@ export default function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    warmupBackends()
+  }, [])
+
   if (location.state?.audience) return <Navigate to="/signin" replace />
   if (currentUser) return <Navigate to={homePath(currentUser.role)} replace />
 
@@ -22,7 +27,10 @@ export default function Login() {
     event.preventDefault()
     setError('')
     setLoading(true)
-    const res = await login(staff.email, staff.password)
+    let res = await login(staff.email, staff.password)
+    if (!res.ok && /starting|reach|Cannot reach|not available|50[234]/i.test(res.error || '')) {
+      res = await login(staff.email, staff.password)
+    }
     setLoading(false)
     if (!res.ok) return setError(res.error)
     navigate(homePath(res.user.role))

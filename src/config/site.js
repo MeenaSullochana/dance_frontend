@@ -21,7 +21,7 @@ export function backendTargetForHost(hostname = hostName()) {
 
 export function preferredTargets() {
   const first = backendTargetForHost()
-  if (first === 'render') return ['render', 'live']
+  if (first === 'render') return ['live', 'render']
   if (first === 'live') return ['live']
   return ['local']
 }
@@ -33,8 +33,8 @@ export const SITE = {
   backends: BACKENDS,
 }
 
-export function getApiUrl() {
-  return SITE.backendTarget === 'local' ? '/api' : `${SITE.backendUrl}/api`
+export function getApiUrl(target = SITE.backendTarget) {
+  return target === 'local' ? '/api' : `${BACKENDS[target]}/api`
 }
 
 export const API_URL = getApiUrl()
@@ -48,4 +48,79 @@ export function selectBackend() {
   const target = preferredTargets()[0]
   setActiveBackend(target)
   return target
+}
+
+function apiUrl(target) {
+  return target === 'local' ? '/api/health' : `${BACKENDS[target]}/api/health`
+}
+
+async function ping(target, timeoutMs) {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
+  try {
+    const res = await fetch(apiUrl(target), {
+      signal: ctrl.signal,
+      headers: { Accept: 'application/json' },
+    })
+    if (!res.ok) return false
+    const data = await res.json().catch(() => ({}))
+    return data.ok === true
+  } catch {
+    return false
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+let backendReady = null
+
+function remember(target) {
+  setActiveBackend(target)
+  return target
+}
+
+async function raceBackends() {
+  const targets = preferredTargets()
+  if (targets.length === 1) return remember(targets[0])
+
+  // Start waking Render immediately; do not wait on it to pick a host.
+  if (targets.includes('render')) {
+    ping('render', 45000).catch(() => {})
+  }
+
+  const winner = await new Promise((resolve) => {
+    let pending = targets.length
+    let settled = false
+    const finish = (target) => {
+      if (settled) return
+      settled = true
+      resolve(target)
+    }
+    for (const target of targets) {
+      ping(target, 1000).then((ok) => {
+        if (ok) finish(target)
+        else if (--pending === 0) finish(targets.includes('render') ? 'render' : targets[0])
+      })
+    }
+  })
+  return remember(winner)
+}
+
+export function ensureBackend() {
+  if (!backendReady) backendReady = raceBackends()
+  return backendReady
+}
+
+export function resetBackendChoice() {
+  backendReady = null
+}
+
+export function warmupBackends() {
+  return ensureBackend()
+}
+
+export function failoverTargets() {
+  const current = SITE.backendTarget
+  const rest = preferredTargets().filter((target) => target !== current)
+  return [current, ...rest]
 }
