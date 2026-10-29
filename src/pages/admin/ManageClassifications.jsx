@@ -490,7 +490,7 @@ export default function ManageClassifications() {
                       placeholder="SK"
                       onChange={(event) => setEditing({ ...editing, prefix: event.target.value.toUpperCase() })}
                     />
-                    <span className="muted small">Registered ID / Chest ID. Example: SK1, SY1, SA1.</span>
+                    <span className="muted small">Registered ID prefix. Players get SK01, SK02.</span>
                   </label>
                 )}
               </>
@@ -511,7 +511,7 @@ export default function ManageClassifications() {
                   placeholder="SK"
                   onChange={(event) => setEditing({ ...editing, prefix: event.target.value.toUpperCase() })}
                 />
-                <span className="muted small">Registered ID / Chest ID prefix. Example: SK, SY, SA, CJ. Players get SK1, SK2.</span>
+                <span className="muted small">Registered ID prefix. Example: SK, SY, SA, CJ. Players get SK01, SK02.</span>
               </label>
             )}
             <div className="form-actions">

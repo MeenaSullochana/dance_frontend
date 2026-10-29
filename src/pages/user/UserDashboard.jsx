@@ -55,8 +55,8 @@ export default function UserDashboard() {
         String(value || '').toLowerCase().includes(query),
       )
     })
-    return published ? [...filtered].sort((a, b) => playerStats[b.id].avg - playerStats[a.id].avg) : filtered
-  }, [players, playerStats, tab, published, search])
+    return filtered
+  }, [players, tab, search])
 
   const winners = players.filter((p) => p.winner)
   const livePlayer = players.find((player) => player.id === settings.livePlayerId)
@@ -95,11 +95,11 @@ export default function UserDashboard() {
                     return person ? (
                       <div key={place.place}>
                         <span className="muted small">{PLACE_LABELS[place.place]}</span>
-                        <PlayerCard player={person} stats={playerStats[person.id]} showScore publicView />
+                        <PlayerCard player={person} stats={playerStats[person.id]} showScore={false} publicView />
                       </div>
                     ) : null
                   }) : winner ? (
-                    <PlayerCard player={winner} stats={playerStats[winner.id]} showScore publicView />
+                    <PlayerCard player={winner} stats={playerStats[winner.id]} showScore={false} publicView />
                   ) : (
                     <span className="muted">No places yet</span>
                   )}
@@ -115,7 +115,7 @@ export default function UserDashboard() {
                   <div key={item.danceStyle} className="winner-slot">
                     <span className="muted small">Choreography</span>
                     <strong>{item.danceStyle}</strong>
-                    {person ? <PlayerCard player={person} stats={playerStats[person.id]} showScore publicView /> : <span className="muted">No winner</span>}
+                    {person ? <PlayerCard player={person} stats={playerStats[person.id]} showScore={false} publicView /> : <span className="muted">No winner</span>}
                   </div>
                 )
               })}
@@ -161,7 +161,6 @@ export default function UserDashboard() {
                 const live = isPerforming(settings, player)
                 const voting = isVotingOpen(settings, player)
                 const mine = scores.find((score) => score.playerId === player.id && score.judgeId === currentUser.id)
-                const stats = playerStats[player.id]
                 return (
                   <tr key={player.id} className={live ? 'is-live-row' : ''}>
                     <td>
@@ -178,9 +177,6 @@ export default function UserDashboard() {
                     <td>{player.danceStyle || '—'}</td>
                     <td>
                       {mine ? <span className="desk-pill id">{mine.criteria?.overall ?? mine.total}/{settings.publicMaxMarks || 10}</span> : '—'}
-                      {published && stats.publicCount > 0 && (
-                        <span className="muted small"> Avg {stats.publicAvg.toFixed(1)}</span>
-                      )}
                     </td>
                     <td className="actions">
                       <button className={`btn ${voting && !mine ? 'btn-primary' : 'btn-ghost'} small`} onClick={() => setStageId(player.id)}>

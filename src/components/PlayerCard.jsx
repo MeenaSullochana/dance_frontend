@@ -38,9 +38,11 @@ export default function PlayerCard({ player, stats, children, showScore = true, 
         <img src={playerPhoto(player)} alt={player.name} />
         <span className="chest-no">{registeredId(player)}</span>
         {live && <span className="live-pill">LIVE</span>}
-        <div className="player-card-status">
-          <StatusBadge status={stats.status} />
-        </div>
+        {!publicView && (
+          <div className="player-card-status">
+            <StatusBadge status={stats.status} />
+          </div>
+        )}
       </div>
       <div className="player-card-body">
         <div className="desk-pills">
@@ -67,7 +69,7 @@ export default function PlayerCard({ player, stats, children, showScore = true, 
             <span className="muted small">{[player.phone, player.email].filter(Boolean).join(' · ')}</span>
           )}
         </div>
-        {showScore && (
+        {showScore && !publicView && (
           <div className="score-line">
             <div className="progress">
               <div className="progress-fill" style={{ width: `${stats.percent}%` }} />
@@ -75,7 +77,7 @@ export default function PlayerCard({ player, stats, children, showScore = true, 
             <span className="small">
               {stats.count ? `Judges ${stats.avg.toFixed(1)} / ${stats.maxTotal || 0}` : 'No judge marks yet'}
               {stats.publicCount > 0 && ` · Public ${stats.publicAvg.toFixed(1)} (${stats.publicCount} users)`}
-              {!publicView && price != null && ` · Rs.${price}`}
+              {price != null && ` · Rs.${price}`}
             </span>
           </div>
         )}

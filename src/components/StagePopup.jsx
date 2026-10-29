@@ -123,7 +123,7 @@ export default function StagePopup({ player, mode, onClose }) {
               ))}
             </div>
           )}
-          {stats && <StatusBadge status={showScore ? stats.status : 'pending'} />}
+          {mode !== 'user' && stats && <StatusBadge status={showScore ? stats.status : 'pending'} />}
           {mode === 'admin' && live && (
             <button type="button" className="btn btn-danger small" onClick={stopLive}>
               Stop live

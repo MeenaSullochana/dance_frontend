@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { FiUpload, FiFileText, FiCheckCircle, FiDownload } from 'react-icons/fi'
 import { useApp } from '../../context/AppContext'
 
-const SAMPLE_EXCEL = '/DOD-Season-14-Sample-Registrations.xlsx'
+const SAMPLE_EXCEL = '/DOD-Season-14-Registrations.xlsx'
 
 export default function ImportRegistrations() {
   const { previewGoogleForm, importGoogleForm, showToast } = useApp()
@@ -47,7 +47,7 @@ export default function ImportRegistrations() {
           <Link to="/admin/classifications" className="link-btn">dynamic classifications</Link>.
           Add an <strong>Age</strong> column in the form for automatic age-band matching.
         </span>
-        <a className="btn btn-primary" href={SAMPLE_EXCEL} download="DOD-Season-14-Sample-Registrations.xlsx">
+        <a className="btn btn-primary" href={SAMPLE_EXCEL} download="DOD-Season-14-Registrations.xlsx">
           <FiDownload /> Download sample Excel
         </a>
       </div>
@@ -56,14 +56,16 @@ export default function ImportRegistrations() {
         <h2><FiUpload /> Upload responses</h2>
         <p className="muted">
           Expected columns: Email, Participant Name, Contact Number, Rotary Club Name, Participant Type,
-          Category of Dance, Number of People Dancing, Names of Other Participants, Dance Style / Genre, Age (recommended).
+          Category of Dance, Number of People Dancing, Names of Other Participants, Dance Style / Genre, Age.
+          Solo uses age. Couple uses the oldest age. Group uses participant type (Rotaractor, Ann, Annette, DPL, Mixed), not age.
+          Rows with a category get a Registered ID from that prefix (SK01, SY02). If age is added later in Edit, the category and ID update only when the category changes.
         </p>
         <div className="import-box">
-          <a className="sample-download glass" href={SAMPLE_EXCEL} download="DOD-Season-14-Sample-Registrations.xlsx">
+          <a className="sample-download glass" href={SAMPLE_EXCEL} download="DOD-Season-14-Registrations.xlsx">
             <FiDownload />
             <div>
               <strong>Download sample Excel</strong>
-              <span className="muted small block">6 demo rows with Age, Solo/Couple/Group and participant types</span>
+              <span className="muted small block">Full Season 14 response sheet — Solo/Couple/Group, Age, and participant types</span>
             </div>
           </a>
           <label className="file-drop">
@@ -110,6 +112,7 @@ export default function ImportRegistrations() {
                   <th>Type</th>
                   <th>Format</th>
                   <th>Classification</th>
+                  <th>Registered ID</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -125,6 +128,7 @@ export default function ImportRegistrations() {
                     <td>{row.participantType || '-'}</td>
                     <td>{row.format || '-'}</td>
                     <td>{row.classification || <span className="muted">Unmatched</span>}</td>
+                    <td>{row.registeredId || <span className="muted">—</span>}</td>
                     <td>
                       {row.ok ? (
                         <span className="badge badge-qualified">Ready</span>

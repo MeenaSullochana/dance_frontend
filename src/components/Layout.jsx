@@ -95,7 +95,7 @@ export default function Layout() {
             <FiGlobe /> Public Website
           </NavLink>
         </nav>
-        <p className="sidebar-api" title={SITE.backendUrl}>
+        <p className="sidebar-api" title={`${SITE.backendTarget}: ${SITE.backendUrl}`}>
           <span className="api-dot" /> {apiHost}
         </p>
         <button className="side-link logout" onClick={handleLogout}>

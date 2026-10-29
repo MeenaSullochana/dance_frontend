@@ -350,7 +350,7 @@ export function AppProvider({ children }) {
               </>
             ) : (
               <>
-                The live API at <b>{SITE.backendUrl}</b> did not respond. Make sure the backend Node app is deployed and running, and that this website origin is allowed in CORS. Then click Try again.
+                The {SITE.backendTarget} API at <b>{SITE.backendUrl}</b> did not respond. Make sure that backend is running, and that this website origin is allowed in CORS. Then click Try again.
               </>
             )}
           </p>

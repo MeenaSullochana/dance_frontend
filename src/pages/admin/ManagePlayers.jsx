@@ -506,7 +506,7 @@ export default function ManagePlayers() {
       </div>
 
       <p className="muted small">
-        Excel imports are marked Fee received. Spot registration asks for the fee and the audio track (pendrive). Not received and Doubt stay highlighted in red. Registered ID uses the category prefix (SK, SY, SA). Arrived issues Arrival ID (S1, C1, G1). Go live needs Arrived and track received. After Go live the performer is on stage. Click Voting started before judges and audience can put marks.
+        Excel imports are marked Fee received. Spot registration asks for the fee and the audio track (pendrive). Not received and Doubt stay highlighted in red. Registered ID uses the category prefix (SK01, SY01, SA01). Arrived issues Arrival ID (S1, C1, G1). Go live needs Arrived and track received. After Go live the performer is on stage. Click Voting started before judges and audience can put marks.
         {query ? ' Showing matches from every format.' : ''}
       </p>
 
